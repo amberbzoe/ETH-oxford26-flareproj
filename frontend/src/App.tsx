@@ -37,6 +37,7 @@ export default function App() {
   const [prices, setPrices] = useState<Record<string, PriceInfo>>({});
   const [loading, setLoading] = useState(false);
   const [txStatus, setTxStatus] = useState('');
+  const [walletBalance, setWalletBalance] = useState<string>('0');
 
   // Fetch live FTSO prices via read-only provider
   const fetchPrices = useCallback(async () => {
@@ -104,10 +105,38 @@ export default function App() {
     return () => clearInterval(interval);
   }, [fetchPrices]);
 
+  // Fetch wallet balance
+  const fetchWalletBalance = useCallback(async () => {
+    if (!signer || !address) {
+      setWalletBalance('0');
+      return;
+    }
+    try {
+      const provider = signer.provider;
+      if (provider) {
+        const balance = await provider.getBalance(address);
+        setWalletBalance(ethers.formatEther(balance));
+      }
+    } catch (e) {
+      console.error("Failed to fetch wallet balance:", e);
+      setWalletBalance('0');
+    }
+  }, [signer, address]);
+
   // Fetch rules when wallet connects
   useEffect(() => {
     if (address && contract) fetchUserRules();
   }, [address, contract, fetchUserRules]);
+
+  // Fetch wallet balance when wallet connects
+  useEffect(() => {
+    if (address && signer) {
+      fetchWalletBalance();
+      // Refresh balance every 10 seconds
+      const interval = setInterval(fetchWalletBalance, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [address, signer, fetchWalletBalance]);
 
   // Create protection rule
   const handleCreateRule = async () => {
@@ -134,6 +163,7 @@ export default function App() {
       setTxStatus('Rule created successfully!');
       setDepositAmount('');
       fetchUserRules();
+      fetchWalletBalance(); // Refresh wallet balance after deposit
     } catch (e: any) {
       setTxStatus(`Error: ${e.reason || e.message}`);
     }
@@ -151,6 +181,7 @@ export default function App() {
       await tx.wait();
       setTxStatus('Withdrawn successfully!');
       fetchUserRules();
+      fetchWalletBalance(); // Refresh wallet balance after withdrawal
     } catch (e: any) {
       setTxStatus(`Error: ${e.reason || e.message}`);
     }
@@ -232,6 +263,28 @@ export default function App() {
               </div>
               <h2 style={{ fontSize: '1.5rem' }}>Your Vault</h2>
             </div>
+
+            {/* Wallet Balance Display */}
+            {address && (
+              <div style={{
+                marginBottom: '24px',
+                padding: '16px',
+                background: 'rgba(46, 204, 113, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid rgba(46, 204, 113, 0.2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Wallet Balance</span>
+                  <span style={{
+                    fontWeight: 'bold',
+                    fontSize: '1.2rem',
+                    color: 'var(--success)'
+                  }}>
+                    {parseFloat(walletBalance).toFixed(4)} C2FLR
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Deposit Collateral (C2FLR)</label>
