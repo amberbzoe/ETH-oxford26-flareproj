@@ -1,14 +1,12 @@
+
 import { Wallet, Shield } from 'lucide-react';
-import { useState } from 'react';
 
-export default function Header() {
-    const [address, setAddress] = useState<string | null>(null);
+interface HeaderProps {
+    address: string | null;
+    connect: () => void;
+}
 
-    const connect = () => {
-        // Mock connection for UI
-        setAddress("0x71C...9A23");
-    };
-
+export default function Header({ address, connect }: HeaderProps) {
     return (
         <header className="glass-panel" style={{ borderRadius: 0, borderLeft: 0, borderRight: 0, borderTop: 0 }}>
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '80px' }}>

@@ -1,10 +1,13 @@
 import { ShieldCheck, TrendingDown, Zap } from 'lucide-react';
 import Header from './components/Header';
+import { useWallet } from './hooks/useWallet';
 
 export default function App() {
+  const { address, connect } = useWallet();
+
   return (
     <div style={{ minHeight: '100vh', backgroundImage: 'radial-gradient(circle at 50% 0%, #1a2332 0%, #0A0E17 100%)' }}>
-      <Header />
+      <Header address={address} connect={connect} />
 
       <main className="container" style={{ marginTop: '60px', paddingBottom: '60px' }}>
         <div className="animate-fade-in" style={{ textAlign: 'center', marginBottom: '60px' }}>
