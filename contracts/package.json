@@ -14,6 +14,9 @@
     "hardhat": "^2.22.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.4.0"
+    "@flarenetwork/flare-periphery-contracts": "^0.1.40",
+    "@openzeppelin/contracts": "^5.4.0",
+    "axios": "^1.13.4",
+    "dotenv": "^17.2.4"
   }
 }
