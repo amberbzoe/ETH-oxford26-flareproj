@@ -1,9 +1,177 @@
-import { ShieldCheck, TrendingDown, Zap } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ethers } from 'ethers';
+import { ShieldCheck, TrendingDown, Zap, Activity, LogOut } from 'lucide-react';
 import Header from './components/Header';
 import { useWallet } from './hooks/useWallet';
+import { useContract } from './hooks/useContract';
+import { FEED_IDS, FDC_EVENT_PRESETS, VAULT_ADDRESS, COSTON2_RPC } from './config/contract';
+
+interface Rule {
+  id: number;
+  owner: string;
+  depositAmount: bigint;
+  priceFeedId: string;
+  priceTrigger: bigint;
+  dangerValue: bigint;
+  isActive: boolean;
+}
+
+interface PriceInfo {
+  value: number;
+  decimals: number;
+  timestamp: number;
+}
 
 export default function App() {
-  const { address, connect } = useWallet();
+  const { address, signer, isCoston2, connect } = useWallet();
+  const contract = useContract(signer);
+
+  // Form state
+  const [depositAmount, setDepositAmount] = useState('');
+  const [priceTrigger, setPriceTrigger] = useState('0.45');
+  const [selectedFeed, setSelectedFeed] = useState('FLR/USD');
+  const [selectedEvent, setSelectedEvent] = useState(0);
+
+  // Data state
+  const [userRules, setUserRules] = useState<Rule[]>([]);
+  const [prices, setPrices] = useState<Record<string, PriceInfo>>({});
+  const [loading, setLoading] = useState(false);
+  const [txStatus, setTxStatus] = useState('');
+
+  // Fetch live FTSO prices via read-only provider
+  const fetchPrices = useCallback(async () => {
+    try {
+      const provider = new ethers.JsonRpcProvider(COSTON2_RPC);
+      const registryContract = new ethers.Contract(
+        "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019",
+        ["function getContractAddressByName(string) view returns (address)"],
+        provider
+      );
+      const ftsoAddr = await registryContract.getContractAddressByName("FtsoV2");
+      const ftso = new ethers.Contract(
+        ftsoAddr,
+        ["function getFeedById(bytes21) view returns (uint256, int8, uint64)"],
+        provider
+      );
+
+      const newPrices: Record<string, PriceInfo> = {};
+      for (const [name, feedId] of Object.entries(FEED_IDS)) {
+        try {
+          const [value, decimals, timestamp] = await ftso.getFeedById(feedId);
+          newPrices[name] = {
+            value: Number(value) / Math.pow(10, Number(decimals)),
+            decimals: Number(decimals),
+            timestamp: Number(timestamp),
+          };
+        } catch {
+          // Feed not available
+        }
+      }
+      setPrices(newPrices);
+    } catch (e) {
+      console.error("Failed to fetch prices:", e);
+    }
+  }, []);
+
+  // Fetch user's rules from contract
+  const fetchUserRules = useCallback(async () => {
+    if (!contract || !address) return;
+    try {
+      const ruleIds: bigint[] = await contract.getUserRules(address);
+      const fetched: Rule[] = [];
+      for (const id of ruleIds) {
+        const r = await contract.rules(id);
+        fetched.push({
+          id: Number(id),
+          owner: r.owner,
+          depositAmount: r.depositAmount,
+          priceFeedId: r.priceFeedId,
+          priceTrigger: r.priceTrigger,
+          dangerValue: r.dangerValue,
+          isActive: r.isActive,
+        });
+      }
+      setUserRules(fetched);
+    } catch (e) {
+      console.error("Failed to fetch rules:", e);
+    }
+  }, [contract, address]);
+
+  // Poll prices every 30s
+  useEffect(() => {
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000);
+    return () => clearInterval(interval);
+  }, [fetchPrices]);
+
+  // Fetch rules when wallet connects
+  useEffect(() => {
+    if (address && contract) fetchUserRules();
+  }, [address, contract, fetchUserRules]);
+
+  // Create protection rule
+  const handleCreateRule = async () => {
+    if (!contract || !depositAmount || !priceTrigger) return;
+    setLoading(true);
+    setTxStatus('Creating protection rule...');
+    try {
+      const feedId = FEED_IDS[selectedFeed];
+      // Convert price trigger to FTSO-scaled value
+      // FTSO returns prices with variable decimals, so we use the feed's decimal count
+      const priceInfo = prices[selectedFeed];
+      const decimals = priceInfo ? priceInfo.decimals : 7; // default fallback
+      const scaledTrigger = Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals));
+      const dangerVal = FDC_EVENT_PRESETS[selectedEvent]?.dangerValue ?? 1;
+
+      const tx = await contract.createRule(
+        feedId,
+        scaledTrigger,
+        dangerVal,
+        { value: ethers.parseEther(depositAmount) }
+      );
+      setTxStatus('Waiting for confirmation...');
+      await tx.wait();
+      setTxStatus('Rule created successfully!');
+      setDepositAmount('');
+      fetchUserRules();
+    } catch (e: any) {
+      setTxStatus(`Error: ${e.reason || e.message}`);
+    }
+    setLoading(false);
+    setTimeout(() => setTxStatus(''), 5000);
+  };
+
+  // Withdraw from a rule
+  const handleWithdraw = async (ruleId: number) => {
+    if (!contract) return;
+    setLoading(true);
+    setTxStatus('Withdrawing...');
+    try {
+      const tx = await contract.withdraw(ruleId);
+      await tx.wait();
+      setTxStatus('Withdrawn successfully!');
+      fetchUserRules();
+    } catch (e: any) {
+      setTxStatus(`Error: ${e.reason || e.message}`);
+    }
+    setLoading(false);
+    setTimeout(() => setTxStatus(''), 5000);
+  };
+
+  // Feed name from ID
+  const feedNameFromId = (feedId: string) => {
+    for (const [name, id] of Object.entries(FEED_IDS)) {
+      if (id.toLowerCase() === feedId.toLowerCase()) return name;
+    }
+    return feedId.slice(0, 10) + '...';
+  };
+
+  // Total protected amount
+  const totalProtected = userRules
+    .filter(r => r.isActive)
+    .reduce((sum, r) => sum + r.depositAmount, 0n);
+
+  const isContractReady = contract !== null && isCoston2;
 
   return (
     <div style={{ minHeight: '100vh', backgroundImage: 'radial-gradient(circle at 50% 0%, #1a2332 0%, #0A0E17 100%)' }}>
@@ -19,6 +187,42 @@ export default function App() {
           </p>
         </div>
 
+        {/* Live Price Ticker */}
+        {Object.keys(prices).length > 0 && (
+          <div className="glass-panel" style={{ padding: '16px 24px', marginBottom: '24px', display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap' }}>
+            {Object.entries(prices).map(([name, info]) => (
+              <div key={name} style={{ textAlign: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{name}</span>
+                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>${info.value.toFixed(4)}</div>
+              </div>
+            ))}
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Source</span>
+              <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--success)' }}>FTSO v2</div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Banner */}
+        {txStatus && (
+          <div className="glass-panel" style={{ padding: '12px 24px', marginBottom: '24px', textAlign: 'center', color: txStatus.startsWith('Error') ? 'var(--danger)' : 'var(--success)' }}>
+            {txStatus}
+          </div>
+        )}
+
+        {!address && (
+          <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', marginBottom: '24px' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>Connect your wallet to get started</p>
+            <button className="btn-primary" onClick={connect}>Connect Wallet</button>
+          </div>
+        )}
+
+        {address && !isCoston2 && (
+          <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', marginBottom: '24px', color: 'var(--warning)' }}>
+            Please switch to Coston2 testnet (Chain ID 114)
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
           {/* Vault Section */}
           <div className="glass-panel" style={{ padding: '32px' }}>
@@ -30,21 +234,41 @@ export default function App() {
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Deposit Collateral (FXRP)</label>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Deposit Collateral (C2FLR)</label>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <input type="number" placeholder="0.00" style={{ flex: 1 }} />
-                <button className="btn-primary">Deposit</button>
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  style={{ flex: 1 }}
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                />
+                <button
+                  className="btn-primary"
+                  onClick={handleCreateRule}
+                  disabled={loading || !isContractReady || !depositAmount}
+                >
+                  {loading ? 'Processing...' : 'Deposit & Protect'}
+                </button>
               </div>
             </div>
 
             <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Total Protected</span>
-                <span style={{ fontWeight: 'bold' }}>0.00 FXRP</span>
+                <span style={{ fontWeight: 'bold' }}>
+                  {totalProtected > 0n ? ethers.formatEther(totalProtected) : '0.00'} C2FLR
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Active Rules</span>
+                <span style={{ fontWeight: 'bold' }}>{userRules.filter(r => r.isActive).length}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Health Factor</span>
-                <span style={{ color: 'var(--success)' }}>Safe</span>
+                <span style={{ color: 'var(--text-muted)' }}>Network</span>
+                <span style={{ color: isCoston2 ? 'var(--success)' : 'var(--warning)' }}>
+                  {isCoston2 ? 'Coston2' : 'Wrong Network'}
+                </span>
               </div>
             </div>
           </div>
@@ -60,36 +284,119 @@ export default function App() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>FTSO Price Feed</label>
+                <select value={selectedFeed} onChange={(e) => setSelectedFeed(e.target.value)}>
+                  {Object.keys(FEED_IDS).map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <label style={{ color: 'var(--text-muted)' }}>FTSO Price Trigger</label>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--success)', background: 'rgba(46, 204, 113, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>Active</span>
+                  <label style={{ color: 'var(--text-muted)' }}>Price Trigger Threshold</label>
+                  {prices[selectedFeed] && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--success)', background: 'rgba(46, 204, 113, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Now: ${prices[selectedFeed].value.toFixed(4)}
+                    </span>
+                  )}
                 </div>
                 <div style={{ position: 'relative' }}>
                   <TrendingDown size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  <input type="number" defaultValue={0.45} style={{ paddingLeft: '40px' }} />
+                  <input
+                    type="number"
+                    value={priceTrigger}
+                    onChange={(e) => setPriceTrigger(e.target.value)}
+                    style={{ paddingLeft: '40px' }}
+                    step="0.01"
+                  />
                   <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>USD</span>
                 </div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  If XRP drops below this price, assets will be swapped to USDC.
+                  If {selectedFeed.split('/')[0]} drops below this price, assets will be returned to your wallet.
                 </p>
               </div>
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>FDC Event Trigger (Advanced)</label>
-                <select>
-                  <option>Select an event source...</option>
-                  <option>SEC Enforcement Action (Regulatory)</option>
-                  <option>USDT Depeg &gt; 5% (Market)</option>
-                  <option>Binance Withdrawal Halt (CEX)</option>
+                <select value={selectedEvent} onChange={(e) => setSelectedEvent(Number(e.target.value))}>
+                  <option value={0}>Binance System Maintenance (CEX)</option>
                 </select>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                  Verified by ~100 FDC data providers via JsonApi attestation
+                </p>
               </div>
-
-              <button className="btn-secondary" style={{ width: '100%', marginTop: '8px' }}>Update Triggers</button>
             </div>
           </div>
         </div>
+
+        {/* Active Protections Dashboard */}
+        {userRules.length > 0 && (
+          <div className="glass-panel" style={{ padding: '32px', marginTop: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ background: 'rgba(46, 204, 113, 0.1)', padding: '10px', borderRadius: '12px' }}>
+                <Activity size={24} color="var(--success)" />
+              </div>
+              <h2 style={{ fontSize: '1.5rem' }}>Active Protections</h2>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {userRules.map((rule) => (
+                <div
+                  key={rule.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px',
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                      Rule #{rule.id} — {feedNameFromId(rule.priceFeedId)}
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      Deposit: {ethers.formatEther(rule.depositAmount)} C2FLR |
+                      Trigger: ${(Number(rule.priceTrigger) / Math.pow(10, prices[feedNameFromId(rule.priceFeedId)]?.decimals || 7)).toFixed(4)}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{
+                      fontSize: '0.8rem',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      background: rule.isActive ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)',
+                      color: rule.isActive ? 'var(--success)' : 'var(--danger)',
+                    }}>
+                      {rule.isActive ? 'Active' : 'Triggered'}
+                    </span>
+                    {rule.isActive && (
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => handleWithdraw(rule.id)}
+                        disabled={loading}
+                      >
+                        <LogOut size={14} /> Withdraw
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Contract Info Footer */}
+        {isContractReady && (
+          <div style={{ textAlign: 'center', marginTop: '40px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            Contract: {VAULT_ADDRESS.slice(0, 6)}...{VAULT_ADDRESS.slice(-4)} on Coston2
+          </div>
+        )}
       </main>
     </div>
   );
 }
-
