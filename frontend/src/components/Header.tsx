@@ -15,11 +15,7 @@ export default function Header({ address, connect }: HeaderProps) {
                     <span>FlareGuard</span>
                 </div>
 
-                <nav style={{ display: 'flex', gap: '32px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    <a href="#" style={{ color: 'var(--text-main)', textDecoration: 'none' }}>Dashboard</a>
-                    <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>Vault</a>
-                    <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>History</a>
-                </nav>
+
 
                 <button className={address ? "btn-secondary" : "btn-primary"} onClick={connect} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Wallet size={18} />
