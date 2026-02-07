@@ -224,7 +224,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundImage: 'radial-gradient(circle at 50% 0%, #1a2332 0%, #0A0E17 100%)' }}>
-      <Header address={address} connect={connect} />
+      <Header address={address} connect={connect} prices={prices} />
 
       <main className="container" style={{ marginTop: '60px', paddingBottom: '60px' }}>
         <div className="animate-fade-in" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -236,33 +236,10 @@ export default function App() {
           </p>
         </div>
 
-        {/* Live Price Ticker */}
-        {Object.keys(prices).length > 0 && (
-          <div className="glass-panel" style={{ padding: '16px 24px', marginBottom: '24px', display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap' }}>
-            {Object.entries(prices).map(([name, info]) => (
-              <div key={name} style={{ textAlign: 'center' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{name}</span>
-                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>${info.value.toFixed(4)}</div>
-              </div>
-            ))}
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Source</span>
-              <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--success)' }}>FTSO v2</div>
-            </div>
-          </div>
-        )}
-
         {/* Status Banner */}
         {txStatus && (
           <div className="glass-panel" style={{ padding: '12px 24px', marginBottom: '24px', textAlign: 'center', color: txStatus.startsWith('Error') ? 'var(--danger)' : 'var(--success)' }}>
             {txStatus}
-          </div>
-        )}
-
-        {!address && (
-          <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', marginBottom: '24px' }}>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>Connect your wallet to get started</p>
-            <button className="btn-primary" onClick={connect}>Connect Wallet</button>
           </div>
         )}
 
@@ -385,11 +362,6 @@ export default function App() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <label style={{ color: 'var(--text-muted)' }}>Price Trigger Threshold</label>
-                      {prices[selectedFeed] && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--success)', background: 'rgba(46, 204, 113, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                          Now: ${prices[selectedFeed].value.toFixed(4)}
-                        </span>
-                      )}
                     </div>
                     <div style={{ position: 'relative' }}>
                       <TrendingDown size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -459,11 +431,6 @@ export default function App() {
                                 style={{ width: '100%', padding: '6px', fontSize: '0.85rem' }}
                                 step="0.01"
                               />
-                              {prices[feed] && (
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                                  Now: ${prices[feed].value.toFixed(4)}
-                                </p>
-                              )}
                             </div>
                           )}
                         </div>
