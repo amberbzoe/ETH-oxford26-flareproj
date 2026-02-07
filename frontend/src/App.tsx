@@ -3,7 +3,7 @@ import Header from './components/Header';
 import { useWallet } from './hooks/useWallet';
 
 export default function App() {
-  const { address, connect } = useWallet();
+  const { address, balance, connect } = useWallet();
 
   return (
     <div style={{ minHeight: '100vh', backgroundImage: 'radial-gradient(circle at 50% 0%, #1a2332 0%, #0A0E17 100%)' }}>
@@ -30,7 +30,12 @@ export default function App() {
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Deposit Collateral (FXRP)</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label style={{ color: 'var(--text-muted)' }}>Deposit Collateral (FXRP)</label>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Balance: {parseFloat(balance).toFixed(4)}
+                </span>
+              </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <input type="number" placeholder="0.00" style={{ flex: 1 }} />
                 <button className="btn-primary">Deposit</button>

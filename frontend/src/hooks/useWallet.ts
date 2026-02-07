@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 
 export function useWallet() {
     const [address, setAddress] = useState<string | null>(null);
+    const [balance, setBalance] = useState<string>("0.00");
     const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
     const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
 
@@ -21,6 +22,9 @@ export function useWallet() {
                 setAddress(accounts[0]);
                 const newSigner = await browserProvider.getSigner();
                 setSigner(newSigner);
+
+                const balanceFn = await browserProvider.getBalance(accounts[0]);
+                setBalance(ethers.formatEther(balanceFn));
             }
         } catch (error) {
             console.error("Failed to connect wallet:", error);
@@ -40,6 +44,9 @@ export function useWallet() {
                         setAddress(accounts[0].address);
                         const newSigner = await browserProvider.getSigner();
                         setSigner(newSigner);
+
+                        const balanceFn = await browserProvider.getBalance(accounts[0].address);
+                        setBalance(ethers.formatEther(balanceFn));
                     }
                 } catch (err) {
                     console.log("Not connected");
@@ -50,5 +57,5 @@ export function useWallet() {
         checkConnection();
     }, []);
 
-    return { address, signer, provider, connect };
+    return { address, balance, signer, provider, connect };
 }
