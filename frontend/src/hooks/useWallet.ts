@@ -4,10 +4,9 @@ import { COSTON2_CHAIN_ID, COSTON2_NETWORK } from '../config/contract';
 
 export function useWallet() {
     const [address, setAddress] = useState<string | null>(null);
-    const [balance, setBalance] = useState<string>("0.00");
     const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
     const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-    const [chainId, setChainId] = useState<number | null>(null);
+    const [isCoston2, setIsCoston2] = useState<boolean>(false);
 
     const switchToCoston2 = async () => {
         if (!window.ethereum) return;
@@ -44,13 +43,10 @@ export function useWallet() {
                 setAddress(accounts[0]);
                 const newSigner = await browserProvider.getSigner();
                 setSigner(newSigner);
-
-                const balanceFn = await browserProvider.getBalance(accounts[0]);
-                setBalance(ethers.formatEther(balanceFn));
             }
 
             const network = await browserProvider.getNetwork();
-            setChainId(Number(network.chainId));
+            setIsCoston2(Number(network.chainId) === COSTON2_CHAIN_ID);
         } catch (error) {
             console.error("Failed to connect wallet:", error);
         }
@@ -68,12 +64,9 @@ export function useWallet() {
                         setAddress(accounts[0].address);
                         const newSigner = await browserProvider.getSigner();
                         setSigner(newSigner);
-
-                        const balanceFn = await browserProvider.getBalance(accounts[0].address);
-                        setBalance(ethers.formatEther(balanceFn));
                     }
                     const network = await browserProvider.getNetwork();
-                    setChainId(Number(network.chainId));
+                    setIsCoston2(Number(network.chainId) === COSTON2_CHAIN_ID);
                 } catch (err) {
                     console.log("Not connected");
                 }
@@ -87,5 +80,5 @@ export function useWallet() {
         checkConnection();
     }, []);
 
-    return { address, signer, provider, connect };
+    return { address, signer, provider, connect, isCoston2 };
 }

@@ -17,7 +17,17 @@ contract FlareGuardVault {
         bool isActive;
     }
 
+    struct MultiConditionRule {
+        address owner;
+        uint256 depositAmount;
+        bytes21[] priceFeedIds;     // Multiple FTSO feed IDs
+        uint256[] priceTriggers;    // Price thresholds (one per feed)
+        uint256[] dangerValues;     // FDC danger values (one per event type)
+        bool isActive;
+    }
+
     ProtectionRule[] public rules;
+    MultiConditionRule[] public multiConditionRules;
 
     // Common FTSO feed IDs
     bytes21 public constant FLR_USD_FEED_ID = bytes21(0x01464c522f55534400000000000000000000000000);
@@ -26,7 +36,9 @@ contract FlareGuardVault {
     bytes21 public constant ETH_USD_FEED_ID = bytes21(0x014554482f55534400000000000000000000000000);
 
     event RuleCreated(uint256 indexed ruleId, address indexed owner, uint256 depositAmount, uint256 priceTrigger);
+    event MultiConditionRuleCreated(uint256 indexed ruleId, address indexed owner, uint256 depositAmount, uint256 feedCount, uint256 eventCount);
     event ProtectionTriggered(uint256 indexed ruleId, address indexed owner, bool eventTrigger, bool priceTrigger);
+    event MultiConditionProtectionTriggered(uint256 indexed ruleId, address indexed owner, string triggerType);
     event Withdrawn(uint256 indexed ruleId, address indexed owner, uint256 amount);
 
     receive() external payable {}
@@ -53,6 +65,89 @@ contract FlareGuardVault {
         }));
 
         emit RuleCreated(ruleId, msg.sender, msg.value, _priceTrigger);
+    }
+
+    /// @notice Create a multi-condition protection rule
+    /// @dev Users can set multiple price feeds and/or events. Any single trigger protects entire collateral.
+    /// @param _priceFeedIds Array of FTSO feed IDs to monitor
+    /// @param _priceTriggers Array of price thresholds (one per feed)
+    /// @param _dangerValues Array of FDC danger values
+    function createMultiConditionRule(
+        bytes21[] calldata _priceFeedIds,
+        uint256[] calldata _priceTriggers,
+        uint256[] calldata _dangerValues
+    ) external payable {
+        require(msg.value > 0, "Must deposit tokens");
+        require(_priceFeedIds.length > 0 || _dangerValues.length > 0, "At least one condition required");
+        require(_priceFeedIds.length == _priceTriggers.length, "Feed/trigger array mismatch");
+
+        uint256 ruleId = multiConditionRules.length;
+        
+        MultiConditionRule storage rule = multiConditionRules.push();
+        rule.owner = msg.sender;
+        rule.depositAmount = msg.value;
+        rule.isActive = true;
+
+        // Copy arrays into storage
+        for (uint256 i = 0; i < _priceFeedIds.length; i++) {
+            rule.priceFeedIds.push(_priceFeedIds[i]);
+            rule.priceTriggers.push(_priceTriggers[i]);
+        }
+        for (uint256 i = 0; i < _dangerValues.length; i++) {
+            rule.dangerValues.push(_dangerValues[i]);
+        }
+
+        emit MultiConditionRuleCreated(ruleId, msg.sender, msg.value, _priceFeedIds.length, _dangerValues.length);
+    }
+
+    /// @notice Execute multi-condition protection (ANY condition triggers full protection)
+    /// @param _ruleId The multi-condition rule to execute
+    /// @param _proof FDC proof (optional, for event trigger)
+    function executeMultiConditionProtection(uint256 _ruleId, IJsonApi.Proof calldata _proof) external {
+        require(_ruleId < multiConditionRules.length, "Multi-condition rule does not exist");
+        MultiConditionRule storage rule = multiConditionRules[_ruleId];
+        require(rule.isActive, "Rule not active");
+        require(rule.depositAmount > 0, "No deposit");
+
+        TestFtsoV2Interface ftsoV2 = ContractRegistry.getTestFtsoV2();
+        bool conditionMet = false;
+        string memory triggerType = "";
+
+        // Check ANY price condition
+        for (uint256 i = 0; i < rule.priceFeedIds.length; i++) {
+            (uint256 currentPrice, , ) = ftsoV2.getFeedById(rule.priceFeedIds[i]);
+            if (currentPrice > 0 && currentPrice < rule.priceTriggers[i]) {
+                conditionMet = true;
+                triggerType = "price";
+                break;
+            }
+        }
+
+        // Check ANY event condition (if proof provided)
+        if (!conditionMet && _proof.data.responseBody.abi_encoded_data.length > 0) {
+            IJsonApiVerification verifier = ContractRegistry.auxiliaryGetIJsonApiVerification();
+            if (verifier.verifyJsonApi(_proof)) {
+                uint256 apiValue = abi.decode(_proof.data.responseBody.abi_encoded_data, (uint256));
+                for (uint256 i = 0; i < rule.dangerValues.length; i++) {
+                    if (apiValue == rule.dangerValues[i]) {
+                        conditionMet = true;
+                        triggerType = "event";
+                        break;
+                    }
+                }
+            }
+        }
+
+        require(conditionMet, "No condition triggered");
+
+        // Return ENTIRE collateral
+        uint256 amount = rule.depositAmount;
+        rule.depositAmount = 0;
+        rule.isActive = false;
+
+        payable(rule.owner).transfer(amount);
+
+        emit MultiConditionProtectionTriggered(_ruleId, rule.owner, triggerType);
     }
 
     /// @notice Execute protection using FDC proof and/or FTSO price check
@@ -145,6 +240,41 @@ contract FlareGuardVault {
             }
         }
         return result;
+    }
+
+    /// @notice Get all multi-condition rule IDs belonging to a user
+    function getUserMultiConditionRules(address _user) external view returns (uint256[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < multiConditionRules.length; i++) {
+            if (multiConditionRules[i].owner == _user) count++;
+        }
+
+        uint256[] memory result = new uint256[](count);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < multiConditionRules.length; i++) {
+            if (multiConditionRules[i].owner == _user) {
+                result[idx] = i;
+                idx++;
+            }
+        }
+        return result;
+    }
+
+    /// @notice Withdraw from multi-condition rule
+    function withdrawMultiCondition(uint256 _ruleId) external {
+        require(_ruleId < multiConditionRules.length, "Rule does not exist");
+        MultiConditionRule storage rule = multiConditionRules[_ruleId];
+        require(msg.sender == rule.owner, "Not rule owner");
+        require(rule.isActive, "Rule not active");
+        require(rule.depositAmount > 0, "Nothing to withdraw");
+
+        uint256 amount = rule.depositAmount;
+        rule.depositAmount = 0;
+        rule.isActive = false;
+
+        payable(msg.sender).transfer(amount);
+
+        emit Withdrawn(_ruleId, msg.sender, amount);
     }
 
     /// @notice Read a live FTSO price feed directly (utility for frontend)

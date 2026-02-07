@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { ShieldCheck, TrendingDown, Zap, Activity, LogOut } from 'lucide-react';
+import { ShieldCheck, TrendingDown, Zap, Activity, LogOut, Info } from 'lucide-react';
 import Header from './components/Header';
 import { useWallet } from './hooks/useWallet';
 import { useContract } from './hooks/useContract';
@@ -31,6 +31,14 @@ export default function App() {
   const [priceTrigger, setPriceTrigger] = useState('0.45');
   const [selectedFeed, setSelectedFeed] = useState('FLR/USD');
   const [selectedEvent, setSelectedEvent] = useState(0);
+  
+  // Multi-condition state
+  const [selectedFeeds, setSelectedFeeds] = useState<string[]>(['FLR/USD']);
+  const [selectedEvents, setSelectedEvents] = useState<number[]>([0]);
+  const [priceThresholds, setPriceThresholds] = useState<Record<string, string>>({
+    'FLR/USD': '0.45',
+  });
+  const [useMultiCondition, setUseMultiCondition] = useState(false);
 
   // Data state
   const [userRules, setUserRules] = useState<Rule[]>([]);
@@ -141,6 +149,47 @@ export default function App() {
     setTimeout(() => setTxStatus(''), 5000);
   };
 
+  // Create multi-condition rule (ANY trigger protects entire collateral)
+  const handleCreateMultiConditionRule = async () => {
+    if (!contract || !depositAmount || selectedFeeds.length === 0) return;
+    setLoading(true);
+    setTxStatus('Creating multi-condition rule...');
+    try {
+      const feedIds: string[] = [];
+      const triggers: bigint[] = [];
+
+      for (const feed of selectedFeeds) {
+        feedIds.push(FEED_IDS[feed]);
+        const threshold = priceThresholds[feed];
+        const priceInfo = prices[feed];
+        const decimals = priceInfo ? priceInfo.decimals : 7;
+        const scaledTrigger = Math.round(parseFloat(threshold) * Math.pow(10, decimals));
+        triggers.push(BigInt(scaledTrigger));
+      }
+
+      const dangerValues = selectedEvents.map(idx => 
+        BigInt(FDC_EVENT_PRESETS[idx]?.dangerValue ?? 1)
+      );
+
+      const tx = await contract.createMultiConditionRule(
+        feedIds,
+        triggers,
+        dangerValues,
+        { value: ethers.parseEther(depositAmount) }
+      );
+
+      setTxStatus('Waiting for confirmation...');
+      await tx.wait();
+      setTxStatus(`✅ Rule created! Protected on ANY of ${selectedFeeds.length + selectedEvents.length} triggers`);
+      setDepositAmount('');
+      fetchUserRules();
+    } catch (e: any) {
+      setTxStatus(`Error: ${e.reason || e.message}`);
+    }
+    setLoading(false);
+    setTimeout(() => setTxStatus(''), 5000);
+  };
+
   // Withdraw from a rule
   const handleWithdraw = async (ruleId: number) => {
     if (!contract) return;
@@ -226,11 +275,25 @@ export default function App() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
           {/* Vault Section */}
           <div className="glass-panel" style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
-                <ShieldCheck size={24} color="var(--primary)" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
+                  <ShieldCheck size={24} color="var(--primary)" />
+                </div>
+                <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Your Vault</h2>
               </div>
-              <h2 style={{ fontSize: '1.5rem' }}>Your Vault</h2>
+              <div style={{ position: 'relative', display: 'inline-block' }} onMouseEnter={(e) => {
+                const tooltip = e.currentTarget.querySelector('[data-tooltip]') as HTMLElement;
+                if (tooltip) tooltip.style.opacity = '1';
+              }} onMouseLeave={(e) => {
+                const tooltip = e.currentTarget.querySelector('[data-tooltip]') as HTMLElement;
+                if (tooltip) tooltip.style.opacity = '0';
+              }}>
+                <Info size={18} color="var(--text-muted)" style={{ cursor: 'help' }} />
+                <div data-tooltip style={{ position: 'absolute', bottom: '120%', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0, 0, 0, 0.95)', color: 'white', padding: '8px 12px', borderRadius: '6px', fontSize: '0.8rem', whiteSpace: 'nowrap', zIndex: 99999, pointerEvents: 'none', opacity: 0, transition: 'opacity 0.3s ease', border: '1px solid var(--primary)' }}>
+                  Deposit collateral to create protection rules
+                </div>
+              </div>
             </div>
 
             <div style={{ marginBottom: '24px' }}>
@@ -245,12 +308,22 @@ export default function App() {
                 />
                 <button
                   className="btn-primary"
-                  onClick={handleCreateRule}
-                  disabled={loading || !isContractReady || !depositAmount}
+                  onClick={useMultiCondition ? handleCreateMultiConditionRule : handleCreateRule}
+                  disabled={
+                    loading ||
+                    !isContractReady ||
+                    !depositAmount ||
+                    (useMultiCondition ? selectedFeeds.length === 0 : !priceTrigger)
+                  }
                 >
-                  {loading ? 'Processing...' : 'Deposit & Protect'}
+                  {loading ? 'Processing...' : useMultiCondition ? 'Create Multi-Condition Rule' : 'Deposit & Protect'}
                 </button>
               </div>
+              {useMultiCondition && selectedFeeds.length + selectedEvents.length > 0 && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--success)', marginTop: '8px', fontWeight: 'bold' }}>
+                  ✅ Protecting entire deposit on ANY of {selectedFeeds.length + selectedEvents.length} triggers
+                </p>
+              )}
             </div>
 
             <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
@@ -283,49 +356,147 @@ export default function App() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>FTSO Price Feed</label>
-                <select value={selectedFeed} onChange={(e) => setSelectedFeed(e.target.value)}>
-                  {Object.keys(FEED_IDS).map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <label style={{ color: 'var(--text-muted)' }}>Price Trigger Threshold</label>
-                  {prices[selectedFeed] && (
-                    <span style={{ fontSize: '0.8rem', color: 'var(--success)', background: 'rgba(46, 204, 113, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                      Now: ${prices[selectedFeed].value.toFixed(4)}
-                    </span>
-                  )}
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <TrendingDown size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              {/* Toggle between single and multi-condition */}
+              <div style={{ padding: '12px', background: 'rgba(245, 69, 98, 0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
                   <input
-                    type="number"
-                    value={priceTrigger}
-                    onChange={(e) => setPriceTrigger(e.target.value)}
-                    style={{ paddingLeft: '40px' }}
-                    step="0.01"
+                    type="checkbox"
+                    checked={useMultiCondition}
+                    onChange={(e) => setUseMultiCondition(e.target.checked)}
                   />
-                  <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>USD</span>
-                </div>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  If {selectedFeed.split('/')[0]} drops below this price, assets will be returned to your wallet.
-                </p>
+                  <span style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>
+                    Multi-condition Mode (protect on ANY trigger)
+                  </span>
+                </label>
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>FDC Event Trigger (Advanced)</label>
-                <select value={selectedEvent} onChange={(e) => setSelectedEvent(Number(e.target.value))}>
-                  <option value={0}>Binance System Maintenance (CEX)</option>
-                </select>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  Verified by ~100 FDC data providers via JsonApi attestation
-                </p>
-              </div>
+              {/* Single-condition form */}
+              {!useMultiCondition ? (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>FTSO Price Feed</label>
+                    <select value={selectedFeed} onChange={(e) => setSelectedFeed(e.target.value)}>
+                      {Object.keys(FEED_IDS).map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <label style={{ color: 'var(--text-muted)' }}>Price Trigger Threshold</label>
+                      {prices[selectedFeed] && (
+                        <span style={{ fontSize: '0.8rem', color: 'var(--success)', background: 'rgba(46, 204, 113, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                          Now: ${prices[selectedFeed].value.toFixed(4)}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <TrendingDown size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input
+                        type="number"
+                        value={priceTrigger}
+                        onChange={(e) => setPriceTrigger(e.target.value)}
+                        style={{ paddingLeft: '40px' }}
+                        step="0.01"
+                      />
+                      <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>USD</span>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                      If {selectedFeed.split('/')[0]} drops below this price, assets will be returned to your wallet.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>FDC Event Trigger (Advanced)</label>
+                    <select value={selectedEvent} onChange={(e) => setSelectedEvent(Number(e.target.value))}>
+                      <option value={0}>Binance System Maintenance (CEX)</option>
+                    </select>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                      Verified by ~100 FDC data providers via JsonApi attestation
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Multi-select Price Feeds */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', color: 'var(--text-muted)' }}>
+                      Select Price Feed Triggers
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                      {Object.keys(FEED_IDS).map(feed => (
+                        <div key={feed} style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedFeeds.includes(feed)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedFeeds([...selectedFeeds, feed]);
+                                  if (!priceThresholds[feed]) {
+                                    setPriceThresholds({...priceThresholds, [feed]: '0.45'});
+                                  }
+                                } else {
+                                  setSelectedFeeds(selectedFeeds.filter(f => f !== feed));
+                                  const newThresholds = {...priceThresholds};
+                                  delete newThresholds[feed];
+                                  setPriceThresholds(newThresholds);
+                                }
+                              }}
+                            />
+                            <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>{feed}</span>
+                          </label>
+                          {selectedFeeds.includes(feed) && (
+                            <div>
+                              <input
+                                type="number"
+                                placeholder="Threshold"
+                                value={priceThresholds[feed] || ''}
+                                onChange={(e) =>
+                                  setPriceThresholds({...priceThresholds, [feed]: e.target.value})
+                                }
+                                style={{ width: '100%', padding: '6px', fontSize: '0.85rem' }}
+                                step="0.01"
+                              />
+                              {prices[feed] && (
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                                  Now: ${prices[feed].value.toFixed(4)}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Multi-select Events */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', color: 'var(--text-muted)' }}>
+                      Select Event Triggers (Optional)
+                    </label>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {FDC_EVENT_PRESETS.map((event, idx) => (
+                        <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedEvents.includes(idx)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedEvents([...selectedEvents, idx]);
+                              } else {
+                                setSelectedEvents(selectedEvents.filter(i => i !== idx));
+                              }
+                            }}
+                          />
+                          <span>{event.name || event.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
