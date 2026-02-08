@@ -105,39 +105,44 @@ export default function Header({ address, connect, prices }: HeaderProps) {
                             How to Use FlareGuard
                         </h2>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <div>
-                                <h3 style={{ marginBottom: '8px', color: 'var(--text)' }}>1. Connect Your Wallet</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                                    Click "Connect Wallet" and switch to the Coston2 testnet. You'll need some C2FLR tokens for deposits.
+                                <h3 style={{ marginBottom: '6px', color: 'var(--text-main)' }}>1. Connect Your Wallet</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                                    Click "Connect Wallet" in the top right corner. Ensure your wallet is set to the <strong>Coston2 testnet</strong> (Chain ID 114). You will need C2FLR tokens to make deposits.
                                 </p>
                             </div>
 
                             <div>
-                                <h3 style={{ marginBottom: '8px', color: 'var(--text)' }}>2. Set Your Triggers</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                                    <strong>Price Trigger:</strong> Choose an asset (FLR, XRP, BTC, ETH) and set a price threshold. If the price drops below this, protection activates.<br /><br />
-                                    <strong>FDC Event Trigger:</strong> Choose from events like exchange maintenance, Fear & Greed Index, or Bitcoin Dominance for additional protection.
+                                <h3 style={{ marginBottom: '6px', color: 'var(--text-main)' }}>2. Configure Safeguards</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                                    Use the <strong>Asset Protection</strong> panel to enable one or more automated safeguards. Each can be toggled independently:
+                                </p>
+                                <ul style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.8', paddingLeft: '20px', marginTop: '6px' }}>
+                                    <li><strong>Binance Maintenance</strong> — activates if the exchange goes offline</li>
+                                    <li><strong>FLR Price Drop</strong> — activates when FLR falls below your target price</li>
+                                    <li><strong>Fear & Greed Index</strong> — activates when market sentiment drops below your threshold</li>
+                                    <li><strong>Bitcoin Dominance</strong> — activates when BTC dominance rises above your threshold</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 style={{ marginBottom: '6px', color: 'var(--text-main)' }}>3. Deposit & Protect</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                                    In the <strong>Your Vault</strong> panel, enter the amount of C2FLR you wish to protect and click "Deposit & Protect". Your funds are held securely in the FlareGuard smart contract.
                                 </p>
                             </div>
 
                             <div>
-                                <h3 style={{ marginBottom: '8px', color: 'var(--text)' }}>3. Deposit & Protect</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                                    Enter the amount of C2FLR to protect and click "Deposit & Protect". Your funds are secured in the FlareGuard vault.
+                                <h3 style={{ marginBottom: '6px', color: 'var(--text-main)' }}>4. Monitor & Manage</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                                    The <strong>Active Protections</strong> panel displays all your current rules. If any safeguard condition is met, your funds are automatically returned to your wallet. You can also withdraw manually at any time.
                                 </p>
                             </div>
 
-                            <div>
-                                <h3 style={{ marginBottom: '8px', color: 'var(--text)' }}>4. Automatic Protection</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                                    When any trigger condition is met, your assets are automatically returned to your wallet, protecting you from further losses.
-                                </p>
-                            </div>
-
-                            <div style={{ marginTop: '8px', padding: '16px', background: 'rgba(46, 204, 113, 0.1)', borderRadius: '12px', border: '1px solid rgba(46, 204, 113, 0.2)' }}>
-                                <p style={{ color: 'var(--success)', fontSize: '0.85rem', margin: 0 }}>
-                                    💡 <strong>Tip:</strong> You can withdraw your funds anytime before a trigger by clicking "Withdraw" on your active protection rules.
+                            <div style={{ marginTop: '4px', padding: '12px 16px', background: 'rgba(46, 204, 113, 0.08)', borderRadius: '10px', border: '1px solid rgba(46, 204, 113, 0.15)' }}>
+                                <p style={{ color: 'var(--success)', fontSize: '0.8rem', margin: 0, lineHeight: '1.5' }}>
+                                    <strong>How it works:</strong> FlareGuard uses Flare's FTSO for real-time price data and FDC for verified off-chain event data, both secured by approximately 100 independent data providers.
                                 </p>
                             </div>
                         </div>

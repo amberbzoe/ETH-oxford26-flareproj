@@ -260,11 +260,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', backgroundImage: 'radial-gradient(circle at 50% 0%, #1a2332 0%, #0A0E17 100%)' }}>
       <Header address={address} connect={connect} prices={prices} />
 
-      <main className="container" style={{ marginTop: '60px', paddingBottom: '60px' }}>
-
-
-
-
+      <main className="container" style={{ marginTop: '20px', paddingBottom: '24px' }}>
         {/* Status Banner */}
         {txStatus && (
           <div className="glass-panel" style={{ padding: '12px 24px', marginBottom: '24px', textAlign: 'center', color: txStatus.startsWith('Error') ? 'var(--danger)' : 'var(--success)' }}>
@@ -278,18 +274,18 @@ export default function App() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '5fr 4fr 4fr', gap: '16px', alignItems: 'stretch' }}>
           {/* Rules Section */}
-          <div className="glass-panel" style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
-                <Zap size={24} color="var(--primary)" />
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '8px', borderRadius: '10px' }}>
+                <Zap size={20} color="var(--primary)" />
               </div>
-              <h2 style={{ fontSize: '1.5rem' }}>Asset Protection</h2>
+              <h2 style={{ fontSize: '1.2rem' }}>Asset Protection</h2>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-              Configure automated safeguards for your deposits. When any condition is met, funds are returned to your wallet immediately.
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+              Configure automated safeguards for your deposits. When any condition is met, funds are returned immediately.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -415,19 +411,19 @@ export default function App() {
           </div>
 
           {/* Vault Section */}
-          <div className="glass-panel" style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
-                <ShieldCheck size={24} color="var(--primary)" />
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '8px', borderRadius: '10px' }}>
+                <ShieldCheck size={20} color="var(--primary)" />
               </div>
-              <h2 style={{ fontSize: '1.5rem' }}>Your Vault</h2>
+              <h2 style={{ fontSize: '1.2rem' }}>Your Vault</h2>
             </div>
 
             {/* Protected Assets Display */}
             {address && (
               <div style={{
-                marginBottom: '24px',
-                padding: '16px',
+                marginBottom: '16px',
+                padding: '12px',
                 background: 'rgba(46, 204, 113, 0.1)',
                 borderRadius: '12px',
                 border: '1px solid rgba(46, 204, 113, 0.2)'
@@ -445,9 +441,9 @@ export default function App() {
               </div>
             )}
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Deposit Collateral (C2FLR)</label>
-              <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Deposit Collateral (C2FLR)</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="number"
                   placeholder="0.00"
@@ -467,7 +463,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Wallet Balance</span>
                 <span style={{ fontWeight: 'bold' }}>
@@ -486,87 +482,81 @@ export default function App() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Active Protections Dashboard - always visible */}
-        <div className="glass-panel" style={{ padding: '32px', marginTop: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
-              <Activity size={24} color="var(--primary)" />
+          {/* Active Protections Dashboard */}
+          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexShrink: 0 }}>
+              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '8px', borderRadius: '10px' }}>
+                <Activity size={20} color="var(--primary)" />
+              </div>
+              <h2 style={{ fontSize: '1.2rem' }}>Active Protections</h2>
             </div>
-            <h2 style={{ fontSize: '1.5rem' }}>Active Protections</h2>
-          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {!address ? (
-              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                Connect your wallet to view and manage your protection rules.
-              </div>
-            ) : userRules.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                No active protections yet. Deposit funds above to create your first protection rule.
-              </div>
-            ) : userRules.map((rule) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              {!address ? (
+                <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  Connect your wallet to view and manage your protection rules.
+                </div>
+              ) : userRules.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  No active protections yet. Deposit funds to create your first rule.
+                </div>
+              ) : userRules.map((rule) => (
                 <div
                   key={rule.id}
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '16px',
+                    padding: '12px',
                     background: 'rgba(0,0,0,0.2)',
-                    borderRadius: '12px',
+                    borderRadius: '10px',
                     border: '1px solid var(--border-color)',
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                       Rule #{rule.id} — {feedNameFromId(rule.priceFeedId)}
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      Deposit: {ethers.formatEther(rule.depositAmount)} C2FLR |
-                      Trigger: ${(Number(rule.priceTrigger) / Math.pow(10, prices[feedNameFromId(rule.priceFeedId)]?.decimals || 7)).toFixed(4)}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{
-                      fontSize: '0.8rem',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
+                      fontSize: '0.7rem',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
                       background: rule.isActive ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)',
                       color: rule.isActive ? 'var(--success)' : 'var(--danger)',
                     }}>
                       {rule.isActive ? 'Active' : 'Triggered'}
                     </span>
-                    {rule.isActive && (
-                      <>
-                        <button
-                          className="btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '0.85rem', background: 'rgba(46, 204, 113, 0.2)', border: '1px solid var(--success)' }}
-                          onClick={() => handleExecuteProtection(rule.id)}
-                          disabled={loading}
-                        >
-                          ⚡ Test Trigger
-                        </button>
-                        <button
-                          className="btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => handleWithdraw(rule.id)}
-                          disabled={loading}
-                        >
-                          <LogOut size={14} /> Withdraw
-                        </button>
-                      </>
-                    )}
                   </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: rule.isActive ? '8px' : '0' }}>
+                    {ethers.formatEther(rule.depositAmount)} C2FLR — Trigger: ${(Number(rule.priceTrigger) / Math.pow(10, prices[feedNameFromId(rule.priceFeedId)]?.decimals || 7)).toFixed(4)}
+                  </div>
+                  {rule.isActive && (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'rgba(46, 204, 113, 0.15)', border: '1px solid var(--success)', flex: 1 }}
+                        onClick={() => handleExecuteProtection(rule.id)}
+                        disabled={loading}
+                      >
+                        Test Trigger
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', flex: 1 }}
+                        onClick={() => handleWithdraw(rule.id)}
+                        disabled={loading}
+                      >
+                        <LogOut size={12} /> Withdraw
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
+            </div>
           </div>
         </div>
 
         {/* Contract Info Footer */}
         {isContractReady && (
-          <div style={{ textAlign: 'center', marginTop: '40px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+          <div style={{ textAlign: 'center', marginTop: '16px', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
             Contract: {VAULT_ADDRESS.slice(0, 6)}...{VAULT_ADDRESS.slice(-4)} on Coston2
           </div>
         )}
