@@ -195,8 +195,11 @@ npx hardhat run scripts/submitFdcRequest.ts --network coston2
 VAULT_ADDRESS=0x... npx hardhat run scripts/fetchProofAndExecute.ts --network coston2 -- <roundId> <ruleId> <abiEncodedRequest>
 ```
 
+## Our experience working with Flare
 
-***
+* We appreciated the guidance from the Flare team — conversations with Nik helped clarify how FDC fits together conceptually, especially around bringing Web2 data on‑chain.
+* The workshops were useful for understanding the overall high-level flow.
+* The Flare Web Dev starter materials gave us a solid starting point for wiring up FTSO v2 feeds and understanding the overall architechture.
 
 ## License
 
