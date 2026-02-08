@@ -61,7 +61,7 @@ export async function GET(request: Request) {
 // NEW: Separate function for FDC protocol (runs in background, doesn't block response)
 async function triggerFDCProtocol() {
     console.log("Starting FDC Protocol (this may take ~3 minutes)...");
-
+    
     try {
         // TODO: Add your FDC protocol implementation here
         // This could involve:
@@ -69,7 +69,7 @@ async function triggerFDCProtocol() {
         // - Processing it
         // - Submitting proofs to the vault
         // - etc.
-
+        
         console.log("FDC Protocol completed successfully");
     } catch (error) {
         console.error("FDC Protocol failed:", error);

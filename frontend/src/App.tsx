@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { ShieldCheck, Zap, Activity, LogOut } from 'lucide-react';
+import { ShieldCheck, Zap, Activity, LogOut, Wrench, TrendingDown, Gauge, BarChart3 } from 'lucide-react';
 import Header from './components/Header';
 import { useWallet } from './hooks/useWallet';
 import { useContract } from './hooks/useContract';
@@ -299,147 +299,120 @@ export default function App() {
               Select triggers that will protect your assets. When ANY trigger activates, funds return to your wallet.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Binance Maintenance - no threshold needed */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                background: enableBinanceMaintenance ? 'rgba(241, 196, 15, 0.1)' : 'rgba(255,255,255,0.03)',
-                border: enableBinanceMaintenance ? '1px solid var(--warning)' : '1px solid var(--border-color)',
-                borderRadius: '12px',
-                transition: 'all 0.2s ease'
-              }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
-                  <input
-                    type="checkbox"
-                    checked={enableBinanceMaintenance}
-                    onChange={(e) => setEnableBinanceMaintenance(e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--warning)' }}
-                  />
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Binance Maintenance</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sell when Binance goes into maintenance</div>
-                  </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {/* Binance Maintenance */}
+              <div
+                className={`trigger-row${enableBinanceMaintenance ? ' active' : ''}`}
+                style={{ '--trigger-bg': 'rgba(241, 196, 15, 0.06)', '--trigger-accent': 'var(--warning)' } as React.CSSProperties}
+                onClick={() => setEnableBinanceMaintenance(!enableBinanceMaintenance)}
+              >
+                <div className="trigger-icon" style={{ background: enableBinanceMaintenance ? 'rgba(241, 196, 15, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  <Wrench size={16} color={enableBinanceMaintenance ? 'var(--warning)' : 'var(--text-muted)'} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>Binance Maintenance</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>Triggers when exchange goes offline</div>
+                </div>
+                <label className="toggle-switch" style={{ '--toggle-color': 'var(--warning)' } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={enableBinanceMaintenance} onChange={(e) => setEnableBinanceMaintenance(e.target.checked)} />
+                  <span className="toggle-slider" />
                 </label>
               </div>
 
-              {/* FLR Price Drop - with threshold input */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                background: enablePriceTrigger ? 'rgba(245, 69, 98, 0.1)' : 'rgba(255,255,255,0.03)',
-                border: enablePriceTrigger ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                borderRadius: '12px',
-                transition: 'all 0.2s ease'
-              }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
-                  <input
-                    type="checkbox"
-                    checked={enablePriceTrigger}
-                    onChange={(e) => setEnablePriceTrigger(e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
-                  />
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>FLR Price Drop</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sell when FLR falls below price</div>
-                  </div>
-                </label>
+              {/* FLR Price Drop */}
+              <div
+                className={`trigger-row${enablePriceTrigger ? ' active' : ''}`}
+                style={{ '--trigger-bg': 'rgba(245, 69, 98, 0.06)', '--trigger-accent': 'var(--primary)' } as React.CSSProperties}
+                onClick={() => setEnablePriceTrigger(!enablePriceTrigger)}
+              >
+                <div className="trigger-icon" style={{ background: enablePriceTrigger ? 'rgba(245, 69, 98, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  <TrendingDown size={16} color={enablePriceTrigger ? 'var(--primary)' : 'var(--text-muted)'} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>FLR Price Drop</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>Triggers when FLR falls below target</div>
+                </div>
                 {enablePriceTrigger && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>$</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '8px' }} onClick={(e) => e.stopPropagation()}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>$</span>
                     <input
                       type="number"
                       value={priceTrigger}
                       onChange={(e) => setPriceTrigger(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ width: '80px', padding: '6px 10px', fontSize: '0.9rem' }}
+                      style={{ width: '70px', padding: '4px 8px', fontSize: '0.8rem', borderRadius: '6px' }}
                       step="0.01"
                     />
                   </div>
                 )}
+                <label className="toggle-switch" style={{ '--toggle-color': 'var(--primary)' } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={enablePriceTrigger} onChange={(e) => setEnablePriceTrigger(e.target.checked)} />
+                  <span className="toggle-slider" />
+                </label>
               </div>
 
-              {/* Fear & Greed Index - with threshold input */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                background: enableFearGreed ? 'rgba(231, 76, 60, 0.1)' : 'rgba(255,255,255,0.03)',
-                border: enableFearGreed ? '1px solid var(--danger)' : '1px solid var(--border-color)',
-                borderRadius: '12px',
-                transition: 'all 0.2s ease'
-              }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
-                  <input
-                    type="checkbox"
-                    checked={enableFearGreed}
-                    onChange={(e) => setEnableFearGreed(e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--danger)' }}
-                  />
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Fear & Greed Index</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sell when index drops below value</div>
-                  </div>
-                </label>
+              {/* Fear & Greed Index */}
+              <div
+                className={`trigger-row${enableFearGreed ? ' active' : ''}`}
+                style={{ '--trigger-bg': 'rgba(231, 76, 60, 0.06)', '--trigger-accent': 'var(--danger)' } as React.CSSProperties}
+                onClick={() => setEnableFearGreed(!enableFearGreed)}
+              >
+                <div className="trigger-icon" style={{ background: enableFearGreed ? 'rgba(231, 76, 60, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  <Gauge size={16} color={enableFearGreed ? 'var(--danger)' : 'var(--text-muted)'} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>Fear & Greed Index</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>Triggers when sentiment drops below</div>
+                </div>
                 {enableFearGreed && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>&lt;</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '8px' }} onClick={(e) => e.stopPropagation()}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>&lt;</span>
                     <input
                       type="number"
                       value={fearGreedThreshold}
                       onChange={(e) => setFearGreedThreshold(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ width: '60px', padding: '6px 10px', fontSize: '0.9rem' }}
+                      style={{ width: '56px', padding: '4px 8px', fontSize: '0.8rem', borderRadius: '6px' }}
                       min="0"
                       max="100"
                     />
                   </div>
                 )}
+                <label className="toggle-switch" style={{ '--toggle-color': 'var(--danger)' } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={enableFearGreed} onChange={(e) => setEnableFearGreed(e.target.checked)} />
+                  <span className="toggle-slider" />
+                </label>
               </div>
 
-              {/* BTC Dominance - with threshold input */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                background: enableBtcDominance ? 'rgba(155, 89, 182, 0.1)' : 'rgba(255,255,255,0.03)',
-                border: enableBtcDominance ? '1px solid #9b59b6' : '1px solid var(--border-color)',
-                borderRadius: '12px',
-                transition: 'all 0.2s ease'
-              }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
-                  <input
-                    type="checkbox"
-                    checked={enableBtcDominance}
-                    onChange={(e) => setEnableBtcDominance(e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: '#9b59b6' }}
-                  />
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Bitcoin Dominance</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sell when BTC.D rises above %</div>
-                  </div>
-                </label>
+              {/* BTC Dominance */}
+              <div
+                className={`trigger-row${enableBtcDominance ? ' active' : ''}`}
+                style={{ '--trigger-bg': 'rgba(155, 89, 182, 0.06)', '--trigger-accent': '#9b59b6' } as React.CSSProperties}
+                onClick={() => setEnableBtcDominance(!enableBtcDominance)}
+              >
+                <div className="trigger-icon" style={{ background: enableBtcDominance ? 'rgba(155, 89, 182, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  <BarChart3 size={16} color={enableBtcDominance ? '#9b59b6' : 'var(--text-muted)'} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>Bitcoin Dominance</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>Triggers when BTC.D rises above</div>
+                </div>
                 {enableBtcDominance && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>&gt;</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '8px' }} onClick={(e) => e.stopPropagation()}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>&gt;</span>
                     <input
                       type="number"
                       value={btcDominanceThreshold}
                       onChange={(e) => setBtcDominanceThreshold(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ width: '60px', padding: '6px 10px', fontSize: '0.9rem' }}
+                      style={{ width: '56px', padding: '4px 8px', fontSize: '0.8rem', borderRadius: '6px' }}
                       min="0"
                       max="100"
                     />
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>%</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>%</span>
                   </div>
                 )}
+                <label className="toggle-switch" style={{ '--toggle-color': '#9b59b6' } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={enableBtcDominance} onChange={(e) => setEnableBtcDominance(e.target.checked)} />
+                  <span className="toggle-slider" />
+                </label>
               </div>
             </div>
 
