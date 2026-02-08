@@ -56,15 +56,15 @@ export default function App() {
     if (rule.priceTrigger > 0n) {
       const decimals = prices[feedNameFromId(rule.priceFeedId)]?.decimals || 7;
       const price = (Number(rule.priceTrigger) / Math.pow(10, decimals)).toFixed(4);
-      triggers.push(`📉 Price Drop: < $${price}`);
+      triggers.push(`Price Drop: < $${price}`);
     }
 
     // FDC Triggers
     rule.triggerTypes.forEach((type, index) => {
       const val = Number(rule.dangerValues[index]);
-      if (type === 0) triggers.push(`🔧 Binance Maintenance (Status: ${val})`);
-      if (type === 1) triggers.push(`😱 Fear & Greed Index < ${val}`);
-      if (type === 2) triggers.push(`📊 BTC Dominance > ${val}%`);
+      if (type === 0) triggers.push(`Binance Maintenance (Status: ${val})`);
+      if (type === 1) triggers.push(`Fear & Greed Index < ${val}`);
+      if (type === 2) triggers.push(`BTC Dominance > ${val}%`);
     });
 
     return triggers;
@@ -294,7 +294,15 @@ export default function App() {
   };
 
   // Execute protection (test trigger) - calls contract to check if conditions are met
+  // Execute protection (test trigger) - calls contract to check if conditions are met
   const handleExecuteProtection = async (ruleId: number) => {
+    // Check if rule has price trigger
+    const rule = userRules.find(r => r.id === ruleId);
+    if (rule && rule.priceTrigger === 0n) {
+      alert('Can only error test FLR price drop condition');
+      return;
+    }
+
     if (!contract) return;
     setLoading(true);
     setTxStatus('Checking trigger conditions...');
@@ -317,7 +325,12 @@ export default function App() {
       fetchUserRules();
       fetchWalletBalance();
     } catch (e: any) {
-      setTxStatus(`Error: ${e.reason || e.message}`);
+      const errorMsg = e.reason || e.message || '';
+      if (errorMsg.includes('not met')) {
+        setTxStatus('Protection conditions not met');
+      } else {
+        setTxStatus(`Error: ${errorMsg}`);
+      }
     }
     setLoading(false);
     setTimeout(() => setTxStatus(''), 5000);
