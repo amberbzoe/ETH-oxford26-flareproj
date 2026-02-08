@@ -24,18 +24,31 @@ export const FEED_IDS: Record<string, string> = {
 };
 
 // FDC event presets for the dropdown
+// triggerType: 0 = EXCHANGE_STATUS (equals), 1 = FEAR_GREED_INDEX (below threshold)
 export const FDC_EVENT_PRESETS = [
-    { label: "Binance System Maintenance", apiUrl: "https://api.binance.com/sapi/v1/system/status", jqFilter: ".status", dangerValue: 1 },
+    {
+        label: "Binance System Maintenance",
+        apiUrl: "https://api.binance.com/sapi/v1/system/status",
+        jqFilter: ".status",
+        dangerValue: 1,
+        triggerType: 0  // EXCHANGE_STATUS: triggers when value == dangerValue
+    },
+    {
+        label: "Fear & Greed Index Below Threshold",
+        apiUrl: "https://api.alternative.me/fng/",
+        jqFilter: ".data[0].value | tonumber",
+        dangerValue: 25,  // Default: Extreme Fear threshold
+        triggerType: 1    // FEAR_GREED_INDEX: triggers when value < dangerValue
+    },
 ];
 
-// Minimal ABI for frontend interactions
 export const VAULT_ABI = [
-    "function createRule(bytes21 _priceFeedId, uint256 _priceTrigger, uint256 _dangerValue) external payable",
+    "function createRule(bytes21 _priceFeedId, uint256 _priceTrigger, uint256 _dangerValue, uint8 _triggerType) external payable",
     "function executeProtection(uint256 _ruleId, tuple(bytes32[] merkleProof, tuple(bytes32 attestationType, bytes32 sourceId, uint64 votingRound, uint64 lowestUsedTimestamp, tuple(string url, string postprocessJq, string abi_signature) requestBody, tuple(bytes abi_encoded_data) responseBody) data) _proof) external",
     "function checkPrice(uint256 _ruleId) external view returns (uint256 currentPrice, int8 decimals, bool triggered)",
     "function withdraw(uint256 _ruleId) external",
     "function ruleCount() external view returns (uint256)",
-    "function rules(uint256) external view returns (address owner, uint256 depositAmount, bytes21 priceFeedId, uint256 priceTrigger, uint256 dangerValue, bool isActive)",
+    "function rules(uint256) external view returns (address owner, uint256 depositAmount, bytes21 priceFeedId, uint256 priceTrigger, uint256 dangerValue, uint8 triggerType, bool isActive)",
     "function getUserRules(address _user) external view returns (uint256[])",
     "function getFeedPrice(bytes21 _feedId) external view returns (uint256 value, int8 decimals, uint64 timestamp)",
     "function FLR_USD_FEED_ID() external view returns (bytes21)",

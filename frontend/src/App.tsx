@@ -13,6 +13,7 @@ interface Rule {
   priceFeedId: string;
   priceTrigger: bigint;
   dangerValue: bigint;
+  triggerType: number;
   isActive: boolean;
 }
 
@@ -31,6 +32,7 @@ export default function App() {
   const [priceTrigger, setPriceTrigger] = useState('0.45');
   const [selectedFeed, setSelectedFeed] = useState('FLR/USD');
   const [selectedEvent, setSelectedEvent] = useState(0);
+  const [fearGreedThreshold, setFearGreedThreshold] = useState('25');
 
   // Data state
   const [userRules, setUserRules] = useState<Rule[]>([]);
@@ -89,6 +91,7 @@ export default function App() {
           priceFeedId: r.priceFeedId,
           priceTrigger: r.priceTrigger,
           dangerValue: r.dangerValue,
+          triggerType: Number(r.triggerType),
           isActive: r.isActive,
         });
       }
@@ -150,12 +153,19 @@ export default function App() {
       const priceInfo = prices[selectedFeed];
       const decimals = priceInfo ? priceInfo.decimals : 7; // default fallback
       const scaledTrigger = Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals));
-      const dangerVal = FDC_EVENT_PRESETS[selectedEvent]?.dangerValue ?? 1;
+      const selectedPreset = FDC_EVENT_PRESETS[selectedEvent];
+
+      // For Fear & Greed, use the custom threshold; otherwise use preset
+      const dangerVal = selectedPreset?.triggerType === 1
+        ? parseInt(fearGreedThreshold)
+        : selectedPreset?.dangerValue ?? 1;
+      const triggerType = selectedPreset?.triggerType ?? 0;
 
       const tx = await contract.createRule(
         feedId,
         scaledTrigger,
         dangerVal,
+        triggerType,
         { value: ethers.parseEther(depositAmount) }
       );
       setTxStatus('Waiting for confirmation...');
@@ -373,12 +383,42 @@ export default function App() {
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>FDC Event Trigger (Advanced)</label>
                 <select value={selectedEvent} onChange={(e) => setSelectedEvent(Number(e.target.value))}>
-                  <option value={0}>Binance System Maintenance (CEX)</option>
+                  {FDC_EVENT_PRESETS.map((preset, index) => (
+                    <option key={index} value={index}>{preset.label}</option>
+                  ))}
                 </select>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
                   Verified by ~100 FDC data providers via JsonApi attestation
                 </p>
               </div>
+
+              {/* Fear & Greed Threshold Input - only show when Fear & Greed is selected */}
+              {FDC_EVENT_PRESETS[selectedEvent]?.triggerType === 1 && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <label style={{ color: 'var(--text-muted)' }}>Fear & Greed Threshold</label>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: parseInt(fearGreedThreshold) <= 25 ? 'var(--danger)' : parseInt(fearGreedThreshold) <= 45 ? 'var(--warning)' : 'var(--success)' }}>
+                      {fearGreedThreshold} - {parseInt(fearGreedThreshold) <= 25 ? 'Extreme Fear' : parseInt(fearGreedThreshold) <= 45 ? 'Fear' : parseInt(fearGreedThreshold) <= 55 ? 'Neutral' : parseInt(fearGreedThreshold) <= 75 ? 'Greed' : 'Extreme Greed'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={fearGreedThreshold}
+                    onChange={(e) => setFearGreedThreshold(e.target.value)}
+                    style={{ width: '100%', accentColor: 'var(--primary)' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    <span>0 (Extreme Fear)</span>
+                    <span>50 (Neutral)</span>
+                    <span>100 (Extreme Greed)</span>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                    Protection triggers when Fear & Greed Index drops below {fearGreedThreshold}.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
