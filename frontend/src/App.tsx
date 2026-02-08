@@ -292,11 +292,11 @@ export default function App() {
               <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
                 <Zap size={24} color="var(--primary)" />
               </div>
-              <h2 style={{ fontSize: '1.5rem' }}>Protection Triggers</h2>
+              <h2 style={{ fontSize: '1.5rem' }}>Asset Protection</h2>
             </div>
 
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-              Select triggers that will protect your assets. When ANY trigger activates, funds return to your wallet.
+              Configure automated safeguards for your deposits. When any condition is met, funds are returned to your wallet immediately.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -461,11 +461,13 @@ export default function App() {
                   style={{ flex: 1 }}
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
+                  min="0"
+                  step="0.01"
                 />
                 <button
                   className="btn-primary"
                   onClick={handleCreateRule}
-                  disabled={loading || !isContractReady || !depositAmount}
+                  disabled={loading || !isContractReady || !depositAmount || parseFloat(depositAmount) <= 0}
                 >
                   {loading ? 'Processing...' : 'Deposit & Protect'}
                 </button>
