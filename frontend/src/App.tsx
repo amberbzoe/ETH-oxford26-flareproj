@@ -145,7 +145,32 @@ export default function App() {
 
   // Create protection rule
   const handleCreateRule = async () => {
-    if (!contract || !depositAmount || !priceTrigger) return;
+    if (!contract || !depositAmount) return;
+
+    // Validation: Ensure at least one trigger is selected
+    if (!enablePriceTrigger && !enableBinanceMaintenance && !enableFearGreed && !enableBtcDominance) {
+      setTxStatus('Error: Please select at least one protection trigger.');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+
+    // Validation: Ensure active triggers have values
+    if (enablePriceTrigger && !priceTrigger) {
+      setTxStatus('Error: Please set a Price Trigger value.');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+    if (enableFearGreed && !fearGreedThreshold) {
+      setTxStatus('Error: Please set a Fear & Greed Index threshold.');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+    if (enableBtcDominance && !btcDominanceThreshold) {
+      setTxStatus('Error: Please set a Bitcoin Dominance threshold.');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+
     setLoading(true);
     setTxStatus('Creating protection rule...');
     try {
@@ -154,7 +179,11 @@ export default function App() {
       // Convert price trigger to FTSO-scaled value (using 7 decimals for FLR)
       const priceInfo = prices['FLR/USD'];
       const decimals = priceInfo ? priceInfo.decimals : 7; // default fallback
-      const scaledTrigger = Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals));
+
+      // If price trigger is disabled, set threshold to 0 so it never triggers (price < 0 is impossible)
+      const scaledTrigger = enablePriceTrigger
+        ? Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals))
+        : 0;
 
       // Build arrays of trigger types and danger values based on enabled checkboxes
       const triggerTypes: number[] = [];
@@ -166,11 +195,11 @@ export default function App() {
       }
       if (enableFearGreed) {
         triggerTypes.push(1);  // FEAR_GREED_INDEX
-        dangerValues.push(parseInt(fearGreedThreshold) || 25);
+        dangerValues.push(parseInt(fearGreedThreshold));
       }
       if (enableBtcDominance) {
         triggerTypes.push(2);  // BTC_DOMINANCE
-        dangerValues.push(parseInt(btcDominanceThreshold) || 60);
+        dangerValues.push(parseInt(btcDominanceThreshold));
       }
 
       const tx = await contract.createRule(
@@ -204,6 +233,36 @@ export default function App() {
       setTxStatus('Withdrawn successfully!');
       fetchUserRules();
       fetchWalletBalance(); // Refresh wallet balance after withdrawal
+    } catch (e: any) {
+      setTxStatus(`Error: ${e.reason || e.message}`);
+    }
+    setLoading(false);
+    setTimeout(() => setTxStatus(''), 5000);
+  };
+
+  // Execute protection (test trigger) - calls contract to check if conditions are met
+  const handleExecuteProtection = async (ruleId: number) => {
+    if (!contract) return;
+    setLoading(true);
+    setTxStatus('Checking trigger conditions...');
+    try {
+      // Empty FDC proof - only price trigger will be checked
+      const emptyProof = {
+        merkleProof: [],
+        data: {
+          attestationType: '0x0000000000000000000000000000000000000000000000000000000000000000',
+          sourceId: '0x0000000000000000000000000000000000000000000000000000000000000000',
+          votingRound: 0,
+          lowestUsedTimestamp: 0,
+          requestBody: { url: '', postprocessJq: '', abi_signature: '' },
+          responseBody: { abi_encoded_data: '0x' }
+        }
+      };
+      const tx = await contract.executeProtection(ruleId, emptyProof);
+      await tx.wait();
+      setTxStatus('Protection triggered! Funds returned to wallet.');
+      fetchUserRules();
+      fetchWalletBalance();
     } catch (e: any) {
       setTxStatus(`Error: ${e.reason || e.message}`);
     }
@@ -490,8 +549,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* Active Protections Dashboard */}
-        {userRules.length > 0 && (
+        {/* Active Protections Dashboard - always visible */}
+        {address && (
           <div className="glass-panel" style={{ padding: '32px', marginTop: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
               <div style={{ background: 'rgba(46, 204, 113, 0.1)', padding: '10px', borderRadius: '12px' }}>
@@ -501,7 +560,11 @@ export default function App() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {userRules.map((rule) => (
+              {userRules.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                  No active protections yet. Deposit funds above to create your first protection rule.
+                </div>
+              ) : userRules.map((rule) => (
                 <div
                   key={rule.id}
                   style={{
@@ -534,14 +597,25 @@ export default function App() {
                       {rule.isActive ? 'Active' : 'Triggered'}
                     </span>
                     {rule.isActive && (
-                      <button
-                        className="btn-secondary"
-                        style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        onClick={() => handleWithdraw(rule.id)}
-                        disabled={loading}
-                      >
-                        <LogOut size={14} /> Withdraw
-                      </button>
+                      <>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: '0.85rem', background: 'rgba(46, 204, 113, 0.2)', border: '1px solid var(--success)' }}
+                          onClick={() => handleExecuteProtection(rule.id)}
+                          disabled={loading}
+                          title="Tests if the Price Trigger condition is met (cannot test FDC triggers from UI)"
+                        >
+                          ⚡ Test Price
+                        </button>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          onClick={() => handleWithdraw(rule.id)}
+                          disabled={loading}
+                        >
+                          <LogOut size={14} /> Withdraw
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

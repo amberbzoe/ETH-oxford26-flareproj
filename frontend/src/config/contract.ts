@@ -1,7 +1,7 @@
 // FlareGuardVault contract configuration
 // Update VAULT_ADDRESS after deploying to Coston2
 
-export const VAULT_ADDRESS = "0x0000000000000000000000000000000000000000"; // TODO: set after deploy
+export const VAULT_ADDRESS = "0x31A22e4abbdBa1b6067567E90Bf27391931b60F4"; // Deployed to Coston2
 
 export const COSTON2_CHAIN_ID = 114;
 export const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
