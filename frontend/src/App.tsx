@@ -280,7 +280,7 @@ export default function App() {
         )}
 
         {address && !isCoston2 && (
-          <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', marginBottom: '24px', color: 'var(--warning)' }}>
+          <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', marginBottom: '24px', color: 'var(--primary)' }}>
             Please switch to Coston2 testnet (Chain ID 114)
           </div>
         )}
@@ -289,8 +289,8 @@ export default function App() {
           {/* Rules Section */}
           <div className="glass-panel" style={{ padding: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ background: 'rgba(241, 196, 15, 0.1)', padding: '10px', borderRadius: '12px' }}>
-                <Zap size={24} color="var(--warning)" />
+              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
+                <Zap size={24} color="var(--primary)" />
               </div>
               <h2 style={{ fontSize: '1.5rem' }}>Protection Triggers</h2>
             </div>
@@ -303,17 +303,17 @@ export default function App() {
               {/* Binance Maintenance */}
               <div
                 className={`trigger-row${enableBinanceMaintenance ? ' active' : ''}`}
-                style={{ '--trigger-bg': 'rgba(241, 196, 15, 0.06)', '--trigger-accent': 'var(--warning)' } as React.CSSProperties}
+                style={{ '--trigger-bg': 'rgba(46, 204, 113, 0.06)', '--trigger-accent': 'var(--success)' } as React.CSSProperties}
                 onClick={() => setEnableBinanceMaintenance(!enableBinanceMaintenance)}
               >
-                <div className="trigger-icon" style={{ background: enableBinanceMaintenance ? 'rgba(241, 196, 15, 0.15)' : 'rgba(255,255,255,0.05)' }}>
-                  <Wrench size={16} color={enableBinanceMaintenance ? 'var(--warning)' : 'var(--text-muted)'} />
+                <div className="trigger-icon" style={{ background: enableBinanceMaintenance ? 'rgba(46, 204, 113, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  <Wrench size={16} color={enableBinanceMaintenance ? 'var(--success)' : 'var(--text-muted)'} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>Binance Maintenance</div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>Triggers when exchange goes offline</div>
                 </div>
-                <label className="toggle-switch" style={{ '--toggle-color': 'var(--warning)' } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+                <label className="toggle-switch" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" checked={enableBinanceMaintenance} onChange={(e) => setEnableBinanceMaintenance(e.target.checked)} />
                   <span className="toggle-slider" />
                 </label>
@@ -322,11 +322,11 @@ export default function App() {
               {/* FLR Price Drop */}
               <div
                 className={`trigger-row${enablePriceTrigger ? ' active' : ''}`}
-                style={{ '--trigger-bg': 'rgba(245, 69, 98, 0.06)', '--trigger-accent': 'var(--primary)' } as React.CSSProperties}
+                style={{ '--trigger-bg': 'rgba(46, 204, 113, 0.06)', '--trigger-accent': 'var(--success)' } as React.CSSProperties}
                 onClick={() => setEnablePriceTrigger(!enablePriceTrigger)}
               >
-                <div className="trigger-icon" style={{ background: enablePriceTrigger ? 'rgba(245, 69, 98, 0.15)' : 'rgba(255,255,255,0.05)' }}>
-                  <TrendingDown size={16} color={enablePriceTrigger ? 'var(--primary)' : 'var(--text-muted)'} />
+                <div className="trigger-icon" style={{ background: enablePriceTrigger ? 'rgba(46, 204, 113, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  <TrendingDown size={16} color={enablePriceTrigger ? 'var(--success)' : 'var(--text-muted)'} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>FLR Price Drop</div>
@@ -344,7 +344,7 @@ export default function App() {
                     />
                   </div>
                 )}
-                <label className="toggle-switch" style={{ '--toggle-color': 'var(--primary)' } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+                <label className="toggle-switch" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" checked={enablePriceTrigger} onChange={(e) => setEnablePriceTrigger(e.target.checked)} />
                   <span className="toggle-slider" />
                 </label>
@@ -353,11 +353,11 @@ export default function App() {
               {/* Fear & Greed Index */}
               <div
                 className={`trigger-row${enableFearGreed ? ' active' : ''}`}
-                style={{ '--trigger-bg': 'rgba(231, 76, 60, 0.06)', '--trigger-accent': 'var(--danger)' } as React.CSSProperties}
+                style={{ '--trigger-bg': 'rgba(46, 204, 113, 0.06)', '--trigger-accent': 'var(--success)' } as React.CSSProperties}
                 onClick={() => setEnableFearGreed(!enableFearGreed)}
               >
-                <div className="trigger-icon" style={{ background: enableFearGreed ? 'rgba(231, 76, 60, 0.15)' : 'rgba(255,255,255,0.05)' }}>
-                  <Gauge size={16} color={enableFearGreed ? 'var(--danger)' : 'var(--text-muted)'} />
+                <div className="trigger-icon" style={{ background: enableFearGreed ? 'rgba(46, 204, 113, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  <Gauge size={16} color={enableFearGreed ? 'var(--success)' : 'var(--text-muted)'} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>Fear & Greed Index</div>
@@ -376,7 +376,7 @@ export default function App() {
                     />
                   </div>
                 )}
-                <label className="toggle-switch" style={{ '--toggle-color': 'var(--danger)' } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+                <label className="toggle-switch" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" checked={enableFearGreed} onChange={(e) => setEnableFearGreed(e.target.checked)} />
                   <span className="toggle-slider" />
                 </label>
@@ -385,11 +385,11 @@ export default function App() {
               {/* BTC Dominance */}
               <div
                 className={`trigger-row${enableBtcDominance ? ' active' : ''}`}
-                style={{ '--trigger-bg': 'rgba(155, 89, 182, 0.06)', '--trigger-accent': '#9b59b6' } as React.CSSProperties}
+                style={{ '--trigger-bg': 'rgba(46, 204, 113, 0.06)', '--trigger-accent': 'var(--success)' } as React.CSSProperties}
                 onClick={() => setEnableBtcDominance(!enableBtcDominance)}
               >
-                <div className="trigger-icon" style={{ background: enableBtcDominance ? 'rgba(155, 89, 182, 0.15)' : 'rgba(255,255,255,0.05)' }}>
-                  <BarChart3 size={16} color={enableBtcDominance ? '#9b59b6' : 'var(--text-muted)'} />
+                <div className="trigger-icon" style={{ background: enableBtcDominance ? 'rgba(46, 204, 113, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  <BarChart3 size={16} color={enableBtcDominance ? 'var(--success)' : 'var(--text-muted)'} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>Bitcoin Dominance</div>
@@ -409,7 +409,7 @@ export default function App() {
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>%</span>
                   </div>
                 )}
-                <label className="toggle-switch" style={{ '--toggle-color': '#9b59b6' } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+                <label className="toggle-switch" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" checked={enableBtcDominance} onChange={(e) => setEnableBtcDominance(e.target.checked)} />
                   <span className="toggle-slider" />
                 </label>
@@ -485,7 +485,7 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Network</span>
-                <span style={{ color: isCoston2 ? 'var(--success)' : 'var(--warning)' }}>
+                <span style={{ color: isCoston2 ? 'var(--success)' : 'var(--primary)' }}>
                   {isCoston2 ? 'Coston2' : 'Wrong Network'}
                 </span>
               </div>
@@ -497,8 +497,8 @@ export default function App() {
         {address && (
           <div className="glass-panel" style={{ padding: '32px', marginTop: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ background: 'rgba(46, 204, 113, 0.1)', padding: '10px', borderRadius: '12px' }}>
-                <Activity size={24} color="var(--success)" />
+              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
+                <Activity size={24} color="var(--primary)" />
               </div>
               <h2 style={{ fontSize: '1.5rem' }}>Active Protections</h2>
             </div>
