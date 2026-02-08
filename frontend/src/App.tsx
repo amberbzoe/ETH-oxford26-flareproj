@@ -4,7 +4,7 @@ import { ShieldCheck, TrendingDown, Zap, Activity, LogOut } from 'lucide-react';
 import Header from './components/Header';
 import { useWallet } from './hooks/useWallet';
 import { useContract } from './hooks/useContract';
-import { FEED_IDS, FDC_EVENT_PRESETS, VAULT_ADDRESS, COSTON2_RPC } from './config/contract';
+import { FEED_IDS, VAULT_ADDRESS, COSTON2_RPC } from './config/contract';
 
 interface Rule {
   id: number;
@@ -31,7 +31,13 @@ export default function App() {
   const [depositAmount, setDepositAmount] = useState('');
   const [priceTrigger, setPriceTrigger] = useState('0.45');
   const [selectedFeed, setSelectedFeed] = useState('FLR/USD');
-  const [selectedEvent, setSelectedEvent] = useState(0);
+
+  // Trigger enable states (checkboxes)
+  const [enablePriceTrigger, setEnablePriceTrigger] = useState(true);
+  const [enableBinanceMaintenance, setEnableBinanceMaintenance] = useState(false);
+  const [enableFearGreed, setEnableFearGreed] = useState(false);
+  const [enableBtcDominance, setEnableBtcDominance] = useState(false);
+
   const [fearGreedThreshold, setFearGreedThreshold] = useState('25');
   const [btcDominanceThreshold, setBtcDominanceThreshold] = useState('60');
 
@@ -154,18 +160,20 @@ export default function App() {
       const priceInfo = prices[selectedFeed];
       const decimals = priceInfo ? priceInfo.decimals : 7; // default fallback
       const scaledTrigger = Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals));
-      const selectedPreset = FDC_EVENT_PRESETS[selectedEvent];
+      // Determine which FDC trigger to use (priority: Binance > Fear&Greed > BTC Dominance)
+      let dangerVal: number = 1;
+      let triggerType: number = 0;
 
-      // For Fear & Greed, use custom threshold; for BTC Dominance, use custom threshold; otherwise use preset
-      let dangerVal: number;
-      if (selectedPreset?.triggerType === 1) {
+      if (enableBinanceMaintenance) {
+        triggerType = 0;  // EXCHANGE_STATUS
+        dangerVal = 1;    // Maintenance mode
+      } else if (enableFearGreed) {
+        triggerType = 1;  // FEAR_GREED_INDEX
         dangerVal = parseInt(fearGreedThreshold);
-      } else if (selectedPreset?.triggerType === 2) {
+      } else if (enableBtcDominance) {
+        triggerType = 2;  // BTC_DOMINANCE
         dangerVal = parseInt(btcDominanceThreshold);
-      } else {
-        dangerVal = selectedPreset?.dangerValue ?? 1;
       }
-      const triggerType = selectedPreset?.triggerType ?? 0;
 
       const tx = await contract.createRule(
         feedId,
@@ -365,21 +373,119 @@ export default function App() {
                 </p>
               </div>
 
+              {/* Trigger Selection Checkboxes */}
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>FDC Event Trigger (Advanced)</label>
-                <select value={selectedEvent} onChange={(e) => setSelectedEvent(Number(e.target.value))}>
-                  {FDC_EVENT_PRESETS.map((preset, index) => (
-                    <option key={index} value={index}>{preset.label}</option>
-                  ))}
-                </select>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  Verified by ~100 FDC data providers via JsonApi attestation
+                <label style={{ display: 'block', marginBottom: '12px', color: 'var(--text-muted)' }}>Select Protection Triggers</label>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                  Choose one or more conditions that will trigger asset protection. Assets are returned when ANY selected trigger activates.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Price Trigger Checkbox */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    background: enablePriceTrigger ? 'rgba(245, 69, 98, 0.1)' : 'rgba(255,255,255,0.03)',
+                    border: enablePriceTrigger ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={enablePriceTrigger}
+                      onChange={(e) => setEnablePriceTrigger(e.target.checked)}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>Price Drop Trigger</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Trigger when {selectedFeed} price falls below threshold</div>
+                    </div>
+                  </label>
+
+                  {/* Binance Maintenance Checkbox */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    background: enableBinanceMaintenance ? 'rgba(241, 196, 15, 0.1)' : 'rgba(255,255,255,0.03)',
+                    border: enableBinanceMaintenance ? '1px solid var(--warning)' : '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={enableBinanceMaintenance}
+                      onChange={(e) => setEnableBinanceMaintenance(e.target.checked)}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--warning)' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>Binance System Maintenance</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Trigger when Binance enters maintenance mode</div>
+                    </div>
+                  </label>
+
+                  {/* Fear & Greed Checkbox */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    background: enableFearGreed ? 'rgba(231, 76, 60, 0.1)' : 'rgba(255,255,255,0.03)',
+                    border: enableFearGreed ? '1px solid var(--danger)' : '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={enableFearGreed}
+                      onChange={(e) => setEnableFearGreed(e.target.checked)}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--danger)' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>Fear & Greed Index</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Trigger when market sentiment drops below threshold</div>
+                    </div>
+                  </label>
+
+                  {/* BTC Dominance Checkbox */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    background: enableBtcDominance ? 'rgba(155, 89, 182, 0.1)' : 'rgba(255,255,255,0.03)',
+                    border: enableBtcDominance ? '1px solid #9b59b6' : '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={enableBtcDominance}
+                      onChange={(e) => setEnableBtcDominance(e.target.checked)}
+                      style={{ width: '18px', height: '18px', accentColor: '#9b59b6' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>Bitcoin Dominance</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Trigger when BTC.D rises above threshold (altcoin risk)</div>
+                    </div>
+                  </label>
+                </div>
+
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '12px' }}>
+                  FDC triggers verified by ~100 data providers via JsonApi attestation
                 </p>
               </div>
 
-              {/* Fear & Greed Threshold Input - only show when Fear & Greed is selected */}
-              {FDC_EVENT_PRESETS[selectedEvent]?.triggerType === 1 && (
-                <div>
+              {/* Fear & Greed Threshold - show when enabled */}
+              {enableFearGreed && (
+                <div style={{ padding: '16px', background: 'rgba(231, 76, 60, 0.05)', borderRadius: '12px', border: '1px solid rgba(231, 76, 60, 0.2)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <label style={{ color: 'var(--text-muted)' }}>Fear & Greed Threshold</label>
                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: parseInt(fearGreedThreshold) <= 25 ? 'var(--danger)' : parseInt(fearGreedThreshold) <= 45 ? 'var(--warning)' : 'var(--success)' }}>
@@ -392,22 +498,19 @@ export default function App() {
                     max="100"
                     value={fearGreedThreshold}
                     onChange={(e) => setFearGreedThreshold(e.target.value)}
-                    style={{ width: '100%', accentColor: 'var(--primary)' }}
+                    style={{ width: '100%', accentColor: 'var(--danger)' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                     <span>0 (Extreme Fear)</span>
                     <span>50 (Neutral)</span>
                     <span>100 (Extreme Greed)</span>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                    Protection triggers when Fear & Greed Index drops below {fearGreedThreshold}.
-                  </p>
                 </div>
               )}
 
-              {/* BTC Dominance Threshold Input - only show when BTC Dominance is selected */}
-              {FDC_EVENT_PRESETS[selectedEvent]?.triggerType === 2 && (
-                <div>
+              {/* BTC Dominance Threshold - show when enabled */}
+              {enableBtcDominance && (
+                <div style={{ padding: '16px', background: 'rgba(155, 89, 182, 0.05)', borderRadius: '12px', border: '1px solid rgba(155, 89, 182, 0.2)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <label style={{ color: 'var(--text-muted)' }}>BTC Dominance Threshold</label>
                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: parseInt(btcDominanceThreshold) >= 65 ? 'var(--danger)' : parseInt(btcDominanceThreshold) >= 55 ? 'var(--warning)' : 'var(--success)' }}>
@@ -420,16 +523,13 @@ export default function App() {
                     max="80"
                     value={btcDominanceThreshold}
                     onChange={(e) => setBtcDominanceThreshold(e.target.value)}
-                    style={{ width: '100%', accentColor: 'var(--primary)' }}
+                    style={{ width: '100%', accentColor: '#9b59b6' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                     <span>40% (Low)</span>
                     <span>60% (Moderate)</span>
                     <span>80% (High)</span>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                    Protection triggers when Bitcoin Dominance rises above {btcDominanceThreshold}%. High BTC.D often signals altcoin weakness.
-                  </p>
                 </div>
               )}
             </div>
