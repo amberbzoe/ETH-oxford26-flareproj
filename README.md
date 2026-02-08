@@ -1,88 +1,270 @@
 # FlareGuard
 
-**Automated DeFi position protection powered by Flare's enshrined oracles.**
+## Description
 
-People lost $2.3 billion to DeFi liquidations last year. FlareGuard prevents them by reacting to real-world events — not just price — using Flare's enshrined data protocols.
+FlareGuard is an automated DeFi position protection vault that combines on-chain price data (FTSO v2) with off-chain real-world event verification (FDC JsonApi) to detect danger conditions and return user deposits before liquidation occurs. Users deposit tokens, configure one or more independent protection triggers, and the vault automatically returns funds when any trigger condition is met.
+
+### Built on Flare
+
+**Note to Judges:** This project is part of the Flare Hackathon track.
+
+- **Network:** Coston2 Testnet (Chain ID 114)
+- **Flare Integrations:** FTSO v2 (price feeds), FDC JsonApi (off-chain event attestation)
+- **Demo Link:** *[Coming soon]*
+
+---
+
+## Deployment Details
+
+- **Contract Address:** [`0xBB552b05e84B300D412F38Ff6A44097D93ed4CD5`](https://coston2-explorer.flare.network/address/0xBB552b05e84B300D412F38Ff6A44097D93ed4CD5)
+- **Block Explorer:** [Coston2 Explorer](https://coston2-explorer.flare.network/address/0xBB552b05e84B300D412F38Ff6A44097D93ed4CD5)
+
+---
 
 ## How It Works
 
-1. User connects wallet and deposits tokens into the FlareGuard vault
-2. User sets protection rules with dual triggers:
-   - **Price trigger** (via FTSO): "If FLR < $0.02, protect me"
-   - **Event trigger** (via FDC JsonApi): "If Binance goes into maintenance mode, protect me"
-3. When either trigger fires, the vault automatically returns tokens to the user's wallet
-4. Users wake up to their assets intact instead of a liquidation notice
+1. **Connect wallet** and deposit C2FLR into the FlareGuard vault on Coston2
+2. **Configure protection triggers** — enable any combination of 4 independent safeguards:
+   - **FLR Price Drop** (FTSO) — triggers when the FLR/USD price falls below a user-defined threshold
+   - **Exchange Maintenance** (FDC) — triggers when the Binance system status API reports downtime (status = 1)
+   - **Fear & Greed Index** (FDC) — triggers when the Crypto Fear & Greed Index drops below a user-defined threshold (e.g. < 25)
+   - **Bitcoin Dominance** (FDC) — triggers when BTC market cap dominance rises above a user-defined threshold (e.g. > 60%)
+3. **Any single trigger** fires → the vault returns the deposited C2FLR to the user's wallet
+4. **Monitor** active protections and live FTSO prices from the frontend dashboard
 
-## Flare Protocols Used
+---
 
-| Protocol | Purpose | How We Use It |
-|----------|---------|---------------|
-| **FTSO v2** | Decentralized price feeds | Live price monitoring with configurable thresholds |
-| **FDC JsonApi** | Real-world event verification | Checks Web2 APIs (e.g. exchange status) via ~100 data providers |
-| **FAssets (FXRP)** | Synthetic wrapped assets | Primary protected asset class in the XRPFi ecosystem |
+## Flare Protocol Integration
+
+### FTSO v2 — Price Feeds
+
+The smart contract reads live prices from Flare's enshrined Time Series Oracle via `ContractRegistry.getTestFtsoV2()` and `getFeedById()`. No external oracle infrastructure is required.
+
+| Feed | Feed ID | Usage |
+|------|---------|-------|
+| FLR/USD | `0x01464c522f55534400000000000000000000000000` | Price trigger + dashboard |
+| BTC/USD | `0x014254432f55534400000000000000000000000000` | Dashboard display |
+| ETH/USD | `0x014554482f55534400000000000000000000000000` | Dashboard display |
+| XRP/USD | `0x015852502f55534400000000000000000000000000` | Dashboard display |
+
+The frontend polls all 4 feeds every 30 seconds. For the price trigger, the contract compares the current FTSO value against the user's threshold: if `currentPrice < priceTrigger`, the condition is met.
+
+### FDC JsonApi — Real-World Event Verification
+
+FlareGuard uses Flare's Data Connector to bring off-chain API data on-chain with cryptographic proof, verified by independent data providers in a voting round (~90 seconds).
+
+| Trigger | API Source | JQ Transform | Condition |
+|---------|-----------|--------------|-----------|
+| Exchange Status | `api.binance.com/sapi/v1/system/status` | `.status` | value == 1 |
+| Fear & Greed Index | `api.alternative.me/fng/` | `.data[0].value \| tonumber` | value < threshold |
+| Bitcoin Dominance | `api.coingecko.com/api/v3/global` | `.data.market_cap_percentage.btc` | value > threshold |
+
+**Attestation flow:**
+1. An FDC request is submitted to `FdcHub.requestAttestation()` with the API URL and a JQ transform
+2. Data providers independently fetch and verify the API response in a voting round
+3. The proof is fetched from the DA Layer (`da-layer-testnet.flare.network`)
+4. The smart contract verifies the proof on-chain using `IJsonApiVerification.verifyJsonApi()`, decodes the response, and checks each trigger condition — if any match, protection executes
+
+```solidity
+// On-chain proof verification and trigger check (from FlareGuardVault.sol)
+IJsonApiVerification verifier = ContractRegistry.auxiliaryGetIJsonApiVerification();
+require(verifier.verifyJsonApi(_proof), "Invalid FDC proof");
+
+uint256 apiValue = abi.decode(_proof.data.responseBody.abi_encoded_data, (uint256));
+for (uint256 i = 0; i < rule.triggerTypes.length; i++) {
+    if (triggerType == TriggerType.EXCHANGE_STATUS && apiValue == dangerValue) eventTriggered = true;
+    if (triggerType == TriggerType.FEAR_GREED_INDEX && apiValue < dangerValue) eventTriggered = true;
+    if (triggerType == TriggerType.BTC_DOMINANCE  && apiValue > dangerValue) eventTriggered = true;
+}
+```
+
+Both FTSO and FDC are accessed through the same `ContractRegistry`, so the vault uses Flare's enshrined data protocols with no external oracle dependencies.
+
+---
+
+## Hackathon Prototype vs Production
+
+### Current Implementation (Mock Transactions)
+
+In this hackathon prototype, when a protection trigger fires, the vault returns the deposited native tokens (C2FLR) directly to the user's wallet via `payable(owner).transfer(amount)`. This demonstrates the full trigger pipeline — FTSO price monitoring, FDC event attestation, on-chain proof verification, and automated execution — without introducing DEX routing complexity.
+
+```
+Trigger fires → Vault transfers deposited C2FLR back to user's wallet
+```
+
+The trigger detection logic (combining FTSO price checks with FDC event verification) is fully functional. What is simplified is the response to that detection.
+
+### Production Implementation (Stablecoin Swap)
+
+Returning the same volatile asset does not preserve value — the asset may continue to decline after it's returned. A production version would swap the volatile collateral into a stablecoin before returning it, preserving the user's value at the moment the trigger fires.
+
+```
+Trigger fires → Vault swaps collateral (e.g. FLR → USDC) via DEX → Stablecoin sent to user's wallet
+```
+
+**How this would work:**
+1. **Trigger detection** — identical to the current system (FTSO price check + FDC event verification)
+2. **DEX swap** — the vault calls a DEX router to swap the volatile asset for a stablecoin, using the FTSO price feed to enforce a minimum output amount (slippage protection)
+3. **Stablecoin delivery** — the resulting stablecoins are transferred to the user's wallet
+4. **Re-entry** — once conditions stabilise, the user can swap back at the lower price
+
+**Additional production considerations:**
+- Slippage protection using FTSO price data to set minimum acceptable output
+- Multi-asset vaults accepting ERC-20 tokens beyond native FLR
+- Decentralised keeper network replacing the Vercel cron for permissionless execution
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (React + Vite)                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐    │
+│  │   Asset       │  │  Your Vault  │  │ Active Protections │    │
+│  │  Protection   │  │              │  │                    │    │
+│  │  4 toggleable │  │  Deposit     │  │  Rule cards with   │    │
+│  │  safeguards   │  │  Balance     │  │  test & withdraw   │    │
+│  └──────────────┘  └──────────────┘  └────────────────────┘    │
+│           │                │                    │               │
+│           └────────────────┼────────────────────┘               │
+│                            │ ethers.js v6                       │
+└────────────────────────────┼────────────────────────────────────┘
+                             │
+┌────────────────────────────┼────────────────────────────────────┐
+│              FlareGuardVault.sol (Coston2)                      │
+│                            │                                    │
+│    ┌───────────────┐  ┌────┴─────┐  ┌─────────────────────┐    │
+│    │ FTSO v2       │  │ Vault    │  │ FDC JsonApi         │    │
+│    │ Price feeds   │  │ Logic    │  │ Event verification  │    │
+│    │ via Contract  │  │ Deposit  │  │ via IJsonApi        │    │
+│    │ Registry      │  │ Withdraw │  │ Verification        │    │
+│    │               │  │ Execute  │  │                     │    │
+│    └───────────────┘  └──────────┘  └─────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+                             │
+┌────────────────────────────┼────────────────────────────────────┐
+│              Keeper Service (Vercel Cron — every 5 min)         │
+│    Monitors FTSO prices → Triggers protections automatically   │
+│    Submits FDC requests → Fetches proofs → Executes on-chain   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## Tech Stack
 
-- **Blockchain**: Flare Network (Coston2 Testnet)
-- **Smart Contracts**: Solidity 0.8.27, Hardhat, `@flarenetwork/flare-periphery-contracts`
-- **Frontend**: React 19, Vite, TypeScript, Ethers.js v6
-- **Off-chain**: FDC attestation scripts (submit request, fetch proof, execute)
+| Layer | Technology |
+|-------|-----------|
+| **Smart Contracts** | Solidity 0.8.27, Hardhat, `@flarenetwork/flare-periphery-contracts`, OpenZeppelin |
+| **Frontend** | React 19, TypeScript, Vite, Ethers.js v6, Framer Motion, Lucide Icons |
+| **Automation** | Vercel Serverless Functions + Cron (5-minute intervals) |
+| **Blockchain** | Flare Coston2 Testnet (Chain ID 114) |
+| **Data Protocols** | FTSO v2 (price feeds), FDC JsonApi (off-chain attestation) |
 
-## Setup
+---
+
+## Project Structure
+
+```
+├── contracts/
+│   ├── contracts/
+│   │   └── FlareGuardVault.sol          # Core vault with FTSO + FDC integration
+│   ├── scripts/
+│   │   ├── deploy.ts                    # Deploy to Coston2
+│   │   ├── checkFtsoPrice.ts            # Query live FTSO price feeds
+│   │   ├── submitFdcRequest.ts          # Submit FDC attestation (Binance status)
+│   │   ├── submitFearGreedRequest.ts    # Submit FDC attestation (Fear & Greed)
+│   │   └── fetchProofAndExecute.ts      # Fetch DA Layer proof & execute protection
+│   ├── hardhat.config.ts
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx                      # Main 3-panel dashboard
+│   │   ├── components/Header.tsx        # Navbar, live FTSO prices, help guide
+│   │   ├── hooks/useWallet.ts           # MetaMask connection + Coston2 network
+│   │   ├── hooks/useContract.ts         # ethers.js contract instance
+│   │   ├── config/contract.ts           # Contract address, feed IDs, ABI
+│   │   └── index.css                    # Glassmorphism design system
+│   ├── api/cron.ts                      # Vercel keeper service
+│   └── .env.example
+├── LICENSE
+└── README.md
+```
+
+---
+
+## Installation & Setup
 
 ### Prerequisites
+
 - Node.js v18+
 - MetaMask with [Coston2 testnet](https://dev.flare.network/network/overview#coston2) configured
-- Test C2FLR from [faucet](https://faucet.flare.network/coston2)
+- Test C2FLR from the [Coston2 faucet](https://faucet.flare.network/coston2)
 
-### Smart Contracts
+### Step-by-Step
+
+**1. Clone the repo:**
+
+```bash
+git clone https://github.com/amberbzoe/ETH-oxford26-flareproj.git
+```
+
+**2. Smart Contracts — install, compile, and deploy:**
+
 ```bash
 cd contracts
 npm install
+
+# Compile
 npx hardhat compile
 
-# Deploy to Coston2 (requires PRIVATE_KEY in .env)
+# Configure environment
+cp .env.example .env   # then add your private key
+
+# Deploy to Coston2
 npx hardhat run scripts/deploy.ts --network coston2
 
-# Check live FTSO prices
+# (Optional) Check live FTSO prices
 npx hardhat run scripts/checkFtsoPrice.ts --network coston2
 ```
 
-### Frontend
+**3. Frontend — install and run:**
+
 ```bash
 cd frontend
 npm install
+
+# Configure environment
+cp .env.example .env   # then add your keeper private key
+
 npm run dev
 ```
 
-Update `frontend/src/config/contract.ts` with the deployed contract address.
+If redeploying the contract, update `frontend/src/config/contract.ts` with the new contract address.
 
-### FDC Attestation Flow
+**4. FDC Attestation Flow (manual):**
+
 ```bash
-# 1. Submit FDC JsonApi request (hits Binance status API)
+# Submit an FDC JsonApi request (e.g. Binance system status)
 npx hardhat run scripts/submitFdcRequest.ts --network coston2
 
-# 2. Wait ~3 minutes for voting round to complete
+# Wait ~3 minutes for the voting round to finalise
 
-# 3. Fetch proof from DA Layer and execute protection
+# Fetch proof from the DA Layer and execute protection
 VAULT_ADDRESS=0x... npx hardhat run scripts/fetchProofAndExecute.ts --network coston2 -- <roundId> <ruleId> <abiEncodedRequest>
 ```
 
-## Demo Script
+### Environment Variables
 
-> FlareGuard is live on Coston2. I've set up a protection rule that monitors
-> Binance's system status via FDC's JsonApi, combined with an FTSO price threshold.
->
-> When I trigger the check, ~100 data providers independently verify the API
-> endpoint... the proof comes back in about 3 minutes... and the user's tokens
-> are returned to safety. All verified on-chain, trustlessly.
->
-> In production, this runs automatically via keeper services. For this demo, we
-> trigger manually to show the full FDC consensus flow.
+| Variable | Location | Purpose |
+|----------|----------|---------|
+| `PRIVATE_KEY` | `contracts/.env` | Wallet key for deploying contracts via Hardhat |
+| `VAULT_ADDRESS` | `contracts/.env` | Deployed FlareGuardVault address for FDC scripts |
+| `KEEPER_PRIVATE_KEY` | `frontend/.env` | Wallet key for the Vercel keeper cron service |
 
-## Developer Feedback (Flare Integration)
-
-FDC documentation was solid for EVM transaction attestations but we struggled to find examples for custom Web2 API attestations with JQ transforms. We ended up using real JsonApi attestations on Coston2 for our demo and would love to see a cookbook-style guide for common Web2 data patterns (REST API to attestation to on-chain verification). The FTSO integration was smooth — the `@flarenetwork/flare-periphery-contracts` package got us reading price feeds in under 30 minutes using `ContractRegistry.getTestFtsoV2()`. We'd suggest adding a section in docs about combining FTSO + FDC in the same contract, since this multi-protocol pattern is where Flare's real value shines. The `IJsonApiVerification` interface via `auxiliaryGetIJsonApiVerification()` worked well once we found it, but the naming split between `IJsonApi`/`IWeb2Json` was initially confusing. Overall, building on Flare was a positive experience — the enshrined oracles remove the need for any external oracle dependencies, which is a significant architectural advantage.
+---
 
 ## License
-MIT
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
