@@ -183,16 +183,56 @@ export default function App() {
 
   // Create protection rule
   const handleCreateRule = async () => {
-    if (!contract || !depositAmount || !priceTrigger) return;
+    // Validation: 1. Asset Protection Check
+    if (!enablePriceTrigger && !enableBinanceMaintenance && !enableFearGreed && !enableBtcDominance) {
+      setTxStatus('Error: Choose asset protection');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+
+    // Validation: 2. Input Value Check
+    if (enablePriceTrigger && (!priceTrigger || parseFloat(priceTrigger) <= 0)) {
+      setTxStatus('Error: Enter a value for Price Trigger');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+    if (enableFearGreed && (!fearGreedThreshold || parseInt(fearGreedThreshold) < 0 || parseInt(fearGreedThreshold) > 100)) {
+      setTxStatus('Error: Enter a valid value for Fear & Greed (0-100)');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+    if (enableBtcDominance && (!btcDominanceThreshold || parseInt(btcDominanceThreshold) < 0 || parseInt(btcDominanceThreshold) > 100)) {
+      setTxStatus('Error: Enter a valid value for BTC Dominance (0-100)');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+
+    // Validation: 3. Funds Check
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      setTxStatus('Error: Enter a deposit amount');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+    if (parseFloat(depositAmount) > parseFloat(walletBalance)) {
+      setTxStatus('Error: insufficient funds');
+      setTimeout(() => setTxStatus(''), 3000);
+      return;
+    }
+
+    if (!contract) return;
     setLoading(true);
     setTxStatus('Creating protection rule...');
     try {
       // Hardcoded FLR/USD feed ID (category 1, 'FLR', 'USD')
       const feedId = '0x01464c522f55534400000000000000000000000000';
-      // Convert price trigger to FTSO-scaled value (using 7 decimals for FLR)
-      const priceInfo = prices['FLR/USD'];
-      const decimals = priceInfo ? priceInfo.decimals : 7; // default fallback
-      const scaledTrigger = Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals));
+
+      // Handle Price Trigger: set to 0 if disabled
+      let scaledTrigger = 0;
+      if (enablePriceTrigger) {
+        const priceInfo = prices['FLR/USD'];
+        const decimals = priceInfo ? priceInfo.decimals : 7; // default fallback
+        scaledTrigger = Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals));
+      }
 
       // Build arrays of trigger types and danger values based on enabled checkboxes
       const triggerTypes: number[] = [];
@@ -204,11 +244,11 @@ export default function App() {
       }
       if (enableFearGreed) {
         triggerTypes.push(1);  // FEAR_GREED_INDEX
-        dangerValues.push(parseInt(fearGreedThreshold) || 25);
+        dangerValues.push(parseInt(fearGreedThreshold));
       }
       if (enableBtcDominance) {
         triggerTypes.push(2);  // BTC_DOMINANCE
-        dangerValues.push(parseInt(btcDominanceThreshold) || 60);
+        dangerValues.push(parseInt(btcDominanceThreshold));
       }
 
       const tx = await contract.createRule(
