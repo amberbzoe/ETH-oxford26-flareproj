@@ -47,7 +47,7 @@ The smart contract reads live prices from Flare's enshrined Time Series Oracle v
 | ETH/USD | `0x014554482f55534400000000000000000000000000` | Dashboard display |
 | XRP/USD | `0x015852502f55534400000000000000000000000000` | Dashboard display |
 
-The frontend polls all 4 feeds every 30 seconds. For the price trigger, the contract compares the current FTSO value against the user's threshold: if `currentPrice < priceTrigger`, the condition is met.
+The frontend polls all 4 feeds every 5 minutes (Vercel Free-Use Sever Restrictions). For the price trigger, the contract compares the current FTSO value against the user's threshold: if `currentPrice < priceTrigger`, the condition is met.
 
 ### FDC JsonApi — Real-World Event Verification
 
