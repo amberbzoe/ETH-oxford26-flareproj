@@ -489,21 +489,24 @@ export default function App() {
         </div>
 
         {/* Active Protections Dashboard - always visible */}
-        {address && (
-          <div className="glass-panel" style={{ padding: '32px', marginTop: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
-                <Activity size={24} color="var(--primary)" />
-              </div>
-              <h2 style={{ fontSize: '1.5rem' }}>Active Protections</h2>
+        <div className="glass-panel" style={{ padding: '32px', marginTop: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
+              <Activity size={24} color="var(--primary)" />
             </div>
+            <h2 style={{ fontSize: '1.5rem' }}>Active Protections</h2>
+          </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {userRules.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                  No active protections yet. Deposit funds above to create your first protection rule.
-                </div>
-              ) : userRules.map((rule) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {!address ? (
+              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                Connect your wallet to view and manage your protection rules.
+              </div>
+            ) : userRules.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                No active protections yet. Deposit funds above to create your first protection rule.
+              </div>
+            ) : userRules.map((rule) => (
                 <div
                   key={rule.id}
                   style={{
@@ -558,9 +561,8 @@ export default function App() {
                   </div>
                 </div>
               ))}
-            </div>
           </div>
-        )}
+        </div>
 
         {/* Contract Info Footer */}
         {isContractReady && (
