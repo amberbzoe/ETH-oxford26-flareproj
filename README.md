@@ -6,7 +6,7 @@ FlareGuard is an automated DeFi position protection vault that combines on-chain
 
 ### Built on Flare
 
-**Note to Judges:** This project is part of the Flare Hackathon track.
+**Note to Judges:** This project is part of both the Main (Predictions Markets + DeFi track) and also the Flare Hackathon track.
 
 - **Network:** Coston2 Testnet (Chain ID 114)
 - **Flare Integrations:** FTSO v2 (price feeds), FDC JsonApi (off-chain event attestation)
@@ -51,7 +51,7 @@ The frontend polls all 4 feeds every 5 minutes (Vercel Free-Use Sever Restrictio
 
 ### FDC JsonApi — Real-World Event Verification
 
-FlareGuard uses Flare's Data Connector to bring off-chain API data on-chain with cryptographic proof, verified by independent data providers in a voting round (~90 seconds).
+FlareGuard uses Flare's Data Connector to bring off-chain API data on-chain with cryptographic proof, verified by independent data providers in a voting round (~180 seconds).
 
 | Trigger | API Source | JQ Transform | Condition |
 |---------|-----------|--------------|-----------|
@@ -117,38 +117,6 @@ Trigger fires → Vault swaps collateral (e.g. FLR → USDC) via DEX → Stablec
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Frontend (React + Vite)                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐    │
-│  │   Asset       │  │  Your Vault  │  │ Active Protections │    │
-│  │  Protection   │  │              │  │                    │    │
-│  │  4 toggleable │  │  Deposit     │  │  Rule cards with   │    │
-│  │  safeguards   │  │  Balance     │  │  test & withdraw   │    │
-│  └──────────────┘  └──────────────┘  └────────────────────┘    │
-│           │                │                    │               │
-│           └────────────────┼────────────────────┘               │
-│                            │ ethers.js v6                       │
-└────────────────────────────┼────────────────────────────────────┘
-                             │
-┌────────────────────────────┼────────────────────────────────────┐
-│              FlareGuardVault.sol (Coston2)                      │
-│                            │                                    │
-│    ┌───────────────┐  ┌────┴─────┐  ┌─────────────────────┐    │
-│    │ FTSO v2       │  │ Vault    │  │ FDC JsonApi         │    │
-│    │ Price feeds   │  │ Logic    │  │ Event verification  │    │
-│    │ via Contract  │  │ Deposit  │  │ via IJsonApi        │    │
-│    │ Registry      │  │ Withdraw │  │ Verification        │    │
-│    │               │  │ Execute  │  │                     │    │
-│    └───────────────┘  └──────────┘  └─────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-┌────────────────────────────┼────────────────────────────────────┐
-│              Keeper Service (Vercel Cron — every 5 min)         │
-│    Monitors FTSO prices → Triggers protections automatically   │
-│    Submits FDC requests → Fetches proofs → Executes on-chain   │
-└─────────────────────────────────────────────────────────────────┘
-```
 
 ---
 
@@ -163,34 +131,6 @@ Trigger fires → Vault swaps collateral (e.g. FLR → USDC) via DEX → Stablec
 | **Data Protocols** | FTSO v2 (price feeds), FDC JsonApi (off-chain attestation) |
 
 ---
-
-## Project Structure
-
-```
-├── contracts/
-│   ├── contracts/
-│   │   └── FlareGuardVault.sol          # Core vault with FTSO + FDC integration
-│   ├── scripts/
-│   │   ├── deploy.ts                    # Deploy to Coston2
-│   │   ├── checkFtsoPrice.ts            # Query live FTSO price feeds
-│   │   ├── submitFdcRequest.ts          # Submit FDC attestation (Binance status)
-│   │   ├── submitFearGreedRequest.ts    # Submit FDC attestation (Fear & Greed)
-│   │   └── fetchProofAndExecute.ts      # Fetch DA Layer proof & execute protection
-│   ├── hardhat.config.ts
-│   └── .env.example
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx                      # Main 3-panel dashboard
-│   │   ├── components/Header.tsx        # Navbar, live FTSO prices, help guide
-│   │   ├── hooks/useWallet.ts           # MetaMask connection + Coston2 network
-│   │   ├── hooks/useContract.ts         # ethers.js contract instance
-│   │   ├── config/contract.ts           # Contract address, feed IDs, ABI
-│   │   └── index.css                    # Glassmorphism design system
-│   ├── api/cron.ts                      # Vercel keeper service
-│   └── .env.example
-├── LICENSE
-└── README.md
-```
 
 ---
 
@@ -255,15 +195,8 @@ npx hardhat run scripts/submitFdcRequest.ts --network coston2
 VAULT_ADDRESS=0x... npx hardhat run scripts/fetchProofAndExecute.ts --network coston2 -- <roundId> <ruleId> <abiEncodedRequest>
 ```
 
-### Environment Variables
 
-| Variable | Location | Purpose |
-|----------|----------|---------|
-| `PRIVATE_KEY` | `contracts/.env` | Wallet key for deploying contracts via Hardhat |
-| `VAULT_ADDRESS` | `contracts/.env` | Deployed FlareGuardVault address for FDC scripts |
-| `KEEPER_PRIVATE_KEY` | `frontend/.env` | Wallet key for the Vercel keeper cron service |
-
----
+***
 
 ## License
 
