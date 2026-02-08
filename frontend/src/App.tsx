@@ -257,77 +257,6 @@ export default function App() {
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-          {/* Vault Section */}
-          <div className="glass-panel" style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
-                <ShieldCheck size={24} color="var(--primary)" />
-              </div>
-              <h2 style={{ fontSize: '1.5rem' }}>Your Vault</h2>
-            </div>
-
-            {/* Protected Assets Display */}
-            {address && (
-              <div style={{
-                marginBottom: '24px',
-                padding: '16px',
-                background: 'rgba(46, 204, 113, 0.1)',
-                borderRadius: '12px',
-                border: '1px solid rgba(46, 204, 113, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Protected Assets</span>
-                  <span style={{
-                    fontWeight: 'bold',
-                    fontSize: '1.2rem',
-                    color: 'var(--success)'
-                  }}>
-                    {totalProtected > 0n ? ethers.formatEther(totalProtected) : '0.00'} C2FLR
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Deposit Collateral (C2FLR)</label>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  style={{ flex: 1 }}
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                />
-                <button
-                  className="btn-primary"
-                  onClick={handleCreateRule}
-                  disabled={loading || !isContractReady || !depositAmount}
-                >
-                  {loading ? 'Processing...' : 'Deposit & Protect'}
-                </button>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Wallet Balance</span>
-                <span style={{ fontWeight: 'bold' }}>
-                  {parseFloat(walletBalance).toFixed(4)} C2FLR
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Active Rules</span>
-                <span style={{ fontWeight: 'bold' }}>{userRules.filter(r => r.isActive).length}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Network</span>
-                <span style={{ color: isCoston2 ? 'var(--success)' : 'var(--warning)' }}>
-                  {isCoston2 ? 'Coston2' : 'Wrong Network'}
-                </span>
-              </div>
-            </div>
-          </div>
-
           {/* Rules Section */}
           <div className="glass-panel" style={{ padding: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
@@ -476,8 +405,8 @@ export default function App() {
                       onChange={(e) => setBtcDominanceThreshold(e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                       style={{ width: '60px', padding: '6px 10px', fontSize: '0.9rem' }}
-                      min="40"
-                      max="80"
+                      min="0"
+                      max="100"
                     />
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>%</span>
                   </div>
@@ -488,6 +417,77 @@ export default function App() {
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '16px' }}>
               Powered by Flare FTSO & FDC — verified by ~100 data providers
             </p>
+          </div>
+
+          {/* Vault Section */}
+          <div className="glass-panel" style={{ padding: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ background: 'rgba(245, 69, 98, 0.1)', padding: '10px', borderRadius: '12px' }}>
+                <ShieldCheck size={24} color="var(--primary)" />
+              </div>
+              <h2 style={{ fontSize: '1.5rem' }}>Your Vault</h2>
+            </div>
+
+            {/* Protected Assets Display */}
+            {address && (
+              <div style={{
+                marginBottom: '24px',
+                padding: '16px',
+                background: 'rgba(46, 204, 113, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid rgba(46, 204, 113, 0.2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Protected Assets</span>
+                  <span style={{
+                    fontWeight: 'bold',
+                    fontSize: '1.2rem',
+                    color: 'var(--success)'
+                  }}>
+                    {totalProtected > 0n ? ethers.formatEther(totalProtected) : '0.00'} C2FLR
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Deposit Collateral (C2FLR)</label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  style={{ flex: 1 }}
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                />
+                <button
+                  className="btn-primary"
+                  onClick={handleCreateRule}
+                  disabled={loading || !isContractReady || !depositAmount}
+                >
+                  {loading ? 'Processing...' : 'Deposit & Protect'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Wallet Balance</span>
+                <span style={{ fontWeight: 'bold' }}>
+                  {parseFloat(walletBalance).toFixed(4)} C2FLR
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Active Rules</span>
+                <span style={{ fontWeight: 'bold' }}>{userRules.filter(r => r.isActive).length}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Network</span>
+                <span style={{ color: isCoston2 ? 'var(--success)' : 'var(--warning)' }}>
+                  {isCoston2 ? 'Coston2' : 'Wrong Network'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
