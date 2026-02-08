@@ -225,14 +225,7 @@ export default function App() {
       <Header address={address} connect={connect} prices={prices} />
 
       <main className="container" style={{ marginTop: '60px', paddingBottom: '60px' }}>
-        <div className="animate-fade-in" style={{ textAlign: 'center', marginBottom: '60px' }}>
-          <h1 style={{ fontSize: '3.5rem', marginBottom: '16px', fontWeight: 800 }}>
-            Never Get <span style={{ color: 'var(--primary)' }}>Liquidated</span> Again.
-          </h1>
-          <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', maxWidth: '700px', margin: '0 auto' }}>
-            FlareGuard monitors real-world events and on-chain prices to protect your assets before the crash happens.
-          </p>
-        </div>
+
 
 
 
