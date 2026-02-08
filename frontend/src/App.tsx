@@ -222,7 +222,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundImage: 'radial-gradient(circle at 50% 0%, #1a2332 0%, #0A0E17 100%)' }}>
-      <Header address={address} connect={connect} />
+      <Header address={address} connect={connect} prices={prices} />
 
       <main className="container" style={{ marginTop: '60px', paddingBottom: '60px' }}>
         <div className="animate-fade-in" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -234,21 +234,7 @@ export default function App() {
           </p>
         </div>
 
-        {/* Live Price Ticker */}
-        {Object.keys(prices).length > 0 && (
-          <div className="glass-panel" style={{ padding: '16px 24px', marginBottom: '24px', display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap' }}>
-            {Object.entries(prices).map(([name, info]) => (
-              <div key={name} style={{ textAlign: 'center' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{name}</span>
-                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>${info.value.toFixed(4)}</div>
-              </div>
-            ))}
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Source</span>
-              <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--success)' }}>FTSO v2</div>
-            </div>
-          </div>
-        )}
+
 
         {/* Status Banner */}
         {txStatus && (
