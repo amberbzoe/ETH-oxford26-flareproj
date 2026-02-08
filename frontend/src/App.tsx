@@ -183,39 +183,43 @@ export default function App() {
 
   // Create protection rule
   const handleCreateRule = async () => {
+    // Validation: 0. Wallet Connection
+    if (!address) {
+      alert('Error: Please connect your wallet first');
+      return;
+    }
+    if (!isCoston2) {
+      alert('Error: Please switch to Coston2 testnet');
+      return;
+    }
+
     // Validation: 1. Asset Protection Check
     if (!enablePriceTrigger && !enableBinanceMaintenance && !enableFearGreed && !enableBtcDominance) {
-      setTxStatus('Error: Choose asset protection');
-      setTimeout(() => setTxStatus(''), 3000);
+      alert('Error: Choose asset protection');
       return;
     }
 
     // Validation: 2. Input Value Check
     if (enablePriceTrigger && (!priceTrigger || parseFloat(priceTrigger) <= 0)) {
-      setTxStatus('Error: Enter a value for Price Trigger');
-      setTimeout(() => setTxStatus(''), 3000);
+      alert('Error: Enter a value for Price Trigger');
       return;
     }
     if (enableFearGreed && (!fearGreedThreshold || parseInt(fearGreedThreshold) < 0 || parseInt(fearGreedThreshold) > 100)) {
-      setTxStatus('Error: Enter a valid value for Fear & Greed (0-100)');
-      setTimeout(() => setTxStatus(''), 3000);
+      alert('Error: Enter a valid value for Fear & Greed (0-100)');
       return;
     }
     if (enableBtcDominance && (!btcDominanceThreshold || parseInt(btcDominanceThreshold) < 0 || parseInt(btcDominanceThreshold) > 100)) {
-      setTxStatus('Error: Enter a valid value for BTC Dominance (0-100)');
-      setTimeout(() => setTxStatus(''), 3000);
+      alert('Error: Enter a valid value for BTC Dominance (0-100)');
       return;
     }
 
     // Validation: 3. Funds Check
     if (!depositAmount || parseFloat(depositAmount) <= 0) {
-      setTxStatus('Error: Enter a deposit amount');
-      setTimeout(() => setTxStatus(''), 3000);
+      alert('Error: Enter a deposit amount');
       return;
     }
     if (parseFloat(depositAmount) > parseFloat(walletBalance)) {
-      setTxStatus('Error: insufficient funds');
-      setTimeout(() => setTxStatus(''), 3000);
+      alert('Error: insufficient funds');
       return;
     }
 
@@ -534,7 +538,7 @@ export default function App() {
                 <button
                   className="btn-primary"
                   onClick={handleCreateRule}
-                  disabled={loading || !isContractReady || !depositAmount || parseFloat(depositAmount) <= 0}
+                  disabled={loading}
                 >
                   {loading ? 'Processing...' : 'Deposit & Protect'}
                 </button>
