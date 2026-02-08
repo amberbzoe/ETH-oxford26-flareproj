@@ -8,12 +8,19 @@ import {IJsonApiVerification} from "@flarenetwork/flare-periphery-contracts/cost
 
 contract FlareGuardVault {
 
+    /// @notice Trigger type determines how the FDC event value is compared to dangerValue
+    enum TriggerType {
+        EXCHANGE_STATUS,    // Trigger when apiValue == dangerValue (e.g., maintenance mode = 1)
+        FEAR_GREED_INDEX    // Trigger when apiValue < dangerValue (e.g., index below 25 = extreme fear)
+    }
+
     struct ProtectionRule {
         address owner;
         uint256 depositAmount;
         bytes21 priceFeedId;        // FTSO feed ID (e.g. FLR/USD, XRP/USD)
         uint256 priceTrigger;       // Price threshold — protect if price drops below this
-        uint256 dangerValue;        // FDC event value that triggers protection (e.g. 1 = maintenance)
+        uint256 dangerValue;        // FDC event value that triggers protection
+        TriggerType triggerType;    // How to compare FDC value to dangerValue
         bool isActive;
     }
 
@@ -34,11 +41,13 @@ contract FlareGuardVault {
     /// @notice Create a protection rule and deposit native tokens into the vault
     /// @param _priceFeedId FTSO feed ID to monitor
     /// @param _priceTrigger Price threshold — if feed value drops below this, trigger protection
-    /// @param _dangerValue FDC event value that indicates danger (e.g. 1 = exchange maintenance)
+    /// @param _dangerValue FDC event value that indicates danger
+    /// @param _triggerType How to compare FDC value (EXCHANGE_STATUS=equals, FEAR_GREED_INDEX=below)
     function createRule(
         bytes21 _priceFeedId,
         uint256 _priceTrigger,
-        uint256 _dangerValue
+        uint256 _dangerValue,
+        TriggerType _triggerType
     ) external payable {
         require(msg.value > 0, "Must deposit tokens");
 
@@ -49,6 +58,7 @@ contract FlareGuardVault {
             priceFeedId: _priceFeedId,
             priceTrigger: _priceTrigger,
             dangerValue: _dangerValue,
+            triggerType: _triggerType,
             isActive: true
         }));
 
@@ -79,7 +89,15 @@ contract FlareGuardVault {
 
             // Decode the verified response data
             uint256 apiValue = abi.decode(_proof.data.responseBody.abi_encoded_data, (uint256));
-            eventTriggered = (apiValue == rule.dangerValue);
+            
+            // Apply trigger logic based on type
+            if (rule.triggerType == TriggerType.EXCHANGE_STATUS) {
+                // Trigger when value equals danger value (e.g., maintenance mode = 1)
+                eventTriggered = (apiValue == rule.dangerValue);
+            } else if (rule.triggerType == TriggerType.FEAR_GREED_INDEX) {
+                // Trigger when value is below danger value (e.g., index < 25 = extreme fear)
+                eventTriggered = (apiValue < rule.dangerValue);
+            }
         }
 
         require(priceTriggered || eventTriggered, "Protection conditions not met");
