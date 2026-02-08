@@ -96,7 +96,7 @@ The trigger detection logic (combining FTSO price checks with FDC event verifica
 
 ### Production Implementation (Stablecoin Swap)
 
-Returning the same volatile asset does not preserve value — the asset may continue to decline after it's returned. A production version would swap the volatile collateral into a stablecoin before returning it, preserving the user's value at the moment the trigger fires.
+Returning the same volatile asset does not preserve value — the asset may continue to decline after it's returned. A production version would trade the volatile collateral for a stablecoin before returning it, preserving the user's value at the moment the trigger fires.
 
 ```
 Trigger fires → Vault swaps collateral (e.g. FLR → USDC) via DEX → Stablecoin sent to user's wallet
