@@ -6,7 +6,7 @@ FlareGuard is an automated DeFi position protection vault that combines on-chain
 
 ### Built on Flare
 
-**Note to Judges:** This project is part of both the Main (Predictions Markets + DeFi track) and also the Flare Hackathon track.
+**Note to Judges:** This project is part of both the Main (Predictions Markets + DeFi track) and also the Flare (Main + Bonus) Hackathon tracks.
 
 - **Network:** Coston2 Testnet (Chain ID 114)
 - **Flare Integrations:** FTSO v2 (price feeds), FDC JsonApi (off-chain event attestation)
