@@ -33,6 +33,7 @@ export default function App() {
   const [selectedFeed, setSelectedFeed] = useState('FLR/USD');
   const [selectedEvent, setSelectedEvent] = useState(0);
   const [fearGreedThreshold, setFearGreedThreshold] = useState('25');
+  const [btcDominanceThreshold, setBtcDominanceThreshold] = useState('60');
 
   // Data state
   const [userRules, setUserRules] = useState<Rule[]>([]);
@@ -155,10 +156,15 @@ export default function App() {
       const scaledTrigger = Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals));
       const selectedPreset = FDC_EVENT_PRESETS[selectedEvent];
 
-      // For Fear & Greed, use the custom threshold; otherwise use preset
-      const dangerVal = selectedPreset?.triggerType === 1
-        ? parseInt(fearGreedThreshold)
-        : selectedPreset?.dangerValue ?? 1;
+      // For Fear & Greed, use custom threshold; for BTC Dominance, use custom threshold; otherwise use preset
+      let dangerVal: number;
+      if (selectedPreset?.triggerType === 1) {
+        dangerVal = parseInt(fearGreedThreshold);
+      } else if (selectedPreset?.triggerType === 2) {
+        dangerVal = parseInt(btcDominanceThreshold);
+      } else {
+        dangerVal = selectedPreset?.dangerValue ?? 1;
+      }
       const triggerType = selectedPreset?.triggerType ?? 0;
 
       const tx = await contract.createRule(
@@ -416,6 +422,34 @@ export default function App() {
                   </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>
                     Protection triggers when Fear & Greed Index drops below {fearGreedThreshold}.
+                  </p>
+                </div>
+              )}
+
+              {/* BTC Dominance Threshold Input - only show when BTC Dominance is selected */}
+              {FDC_EVENT_PRESETS[selectedEvent]?.triggerType === 2 && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <label style={{ color: 'var(--text-muted)' }}>BTC Dominance Threshold</label>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: parseInt(btcDominanceThreshold) >= 65 ? 'var(--danger)' : parseInt(btcDominanceThreshold) >= 55 ? 'var(--warning)' : 'var(--success)' }}>
+                      {btcDominanceThreshold}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="40"
+                    max="80"
+                    value={btcDominanceThreshold}
+                    onChange={(e) => setBtcDominanceThreshold(e.target.value)}
+                    style={{ width: '100%', accentColor: 'var(--primary)' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    <span>40% (Low)</span>
+                    <span>60% (Moderate)</span>
+                    <span>80% (High)</span>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                    Protection triggers when Bitcoin Dominance rises above {btcDominanceThreshold}%. High BTC.D often signals altcoin weakness.
                   </p>
                 </div>
               )}

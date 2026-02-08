@@ -24,7 +24,7 @@ export const FEED_IDS: Record<string, string> = {
 };
 
 // FDC event presets for the dropdown
-// triggerType: 0 = EXCHANGE_STATUS (equals), 1 = FEAR_GREED_INDEX (below threshold)
+// triggerType: 0 = EXCHANGE_STATUS (equals), 1 = FEAR_GREED_INDEX (below threshold), 2 = BTC_DOMINANCE (above threshold)
 export const FDC_EVENT_PRESETS = [
     {
         label: "Binance System Maintenance",
@@ -39,6 +39,13 @@ export const FDC_EVENT_PRESETS = [
         jqFilter: ".data[0].value | tonumber",
         dangerValue: 25,  // Default: Extreme Fear threshold
         triggerType: 1    // FEAR_GREED_INDEX: triggers when value < dangerValue
+    },
+    {
+        label: "Bitcoin Dominance Above Threshold",
+        apiUrl: "https://api.coingecko.com/api/v3/global",
+        jqFilter: ".data.market_cap_percentage.btc",
+        dangerValue: 60,  // Default: 60% BTC dominance threshold
+        triggerType: 2    // BTC_DOMINANCE: triggers when value > dangerValue
     },
 ];
 
