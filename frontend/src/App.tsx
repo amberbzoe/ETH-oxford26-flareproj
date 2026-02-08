@@ -259,7 +259,7 @@ export default function App() {
               <h2 style={{ fontSize: '1.5rem' }}>Your Vault</h2>
             </div>
 
-            {/* Wallet Balance Display */}
+            {/* Protected Assets Display */}
             {address && (
               <div style={{
                 marginBottom: '24px',
@@ -269,13 +269,13 @@ export default function App() {
                 border: '1px solid rgba(46, 204, 113, 0.2)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Wallet Balance</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Protected Assets</span>
                   <span style={{
                     fontWeight: 'bold',
                     fontSize: '1.2rem',
                     color: 'var(--success)'
                   }}>
-                    {parseFloat(walletBalance).toFixed(4)} C2FLR
+                    {totalProtected > 0n ? ethers.formatEther(totalProtected) : '0.00'} C2FLR
                   </span>
                 </div>
               </div>
@@ -303,9 +303,9 @@ export default function App() {
 
             <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Total Protected</span>
+                <span style={{ color: 'var(--text-muted)' }}>Wallet Balance</span>
                 <span style={{ fontWeight: 'bold' }}>
-                  {totalProtected > 0n ? ethers.formatEther(totalProtected) : '0.00'} C2FLR
+                  {parseFloat(walletBalance).toFixed(4)} C2FLR
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
