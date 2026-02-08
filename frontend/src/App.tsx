@@ -12,8 +12,6 @@ interface Rule {
   depositAmount: bigint;
   priceFeedId: string;
   priceTrigger: bigint;
-  dangerValue: bigint;
-  triggerType: number;
   isActive: boolean;
 }
 
@@ -96,8 +94,6 @@ export default function App() {
           depositAmount: r.depositAmount,
           priceFeedId: r.priceFeedId,
           priceTrigger: r.priceTrigger,
-          dangerValue: r.dangerValue,
-          triggerType: Number(r.triggerType),
           isActive: r.isActive,
         });
       }
@@ -159,26 +155,29 @@ export default function App() {
       const priceInfo = prices['FLR/USD'];
       const decimals = priceInfo ? priceInfo.decimals : 7; // default fallback
       const scaledTrigger = Math.round(parseFloat(priceTrigger) * Math.pow(10, decimals));
-      // Determine which FDC trigger to use (priority: Binance > Fear&Greed > BTC Dominance)
-      let dangerVal: number = 1;
-      let triggerType: number = 0;
+
+      // Build arrays of trigger types and danger values based on enabled checkboxes
+      const triggerTypes: number[] = [];
+      const dangerValues: number[] = [];
 
       if (enableBinanceMaintenance) {
-        triggerType = 0;  // EXCHANGE_STATUS
-        dangerVal = 1;    // Maintenance mode
-      } else if (enableFearGreed) {
-        triggerType = 1;  // FEAR_GREED_INDEX
-        dangerVal = parseInt(fearGreedThreshold);
-      } else if (enableBtcDominance) {
-        triggerType = 2;  // BTC_DOMINANCE
-        dangerVal = parseInt(btcDominanceThreshold);
+        triggerTypes.push(0);  // EXCHANGE_STATUS
+        dangerValues.push(1);  // Maintenance mode
+      }
+      if (enableFearGreed) {
+        triggerTypes.push(1);  // FEAR_GREED_INDEX
+        dangerValues.push(parseInt(fearGreedThreshold) || 25);
+      }
+      if (enableBtcDominance) {
+        triggerTypes.push(2);  // BTC_DOMINANCE
+        dangerValues.push(parseInt(btcDominanceThreshold) || 60);
       }
 
       const tx = await contract.createRule(
         feedId,
         scaledTrigger,
-        dangerVal,
-        triggerType,
+        triggerTypes,
+        dangerValues,
         { value: ethers.parseEther(depositAmount) }
       );
       setTxStatus('Waiting for confirmation...');

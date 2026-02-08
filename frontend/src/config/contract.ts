@@ -50,12 +50,12 @@ export const FDC_EVENT_PRESETS = [
 ];
 
 export const VAULT_ABI = [
-    "function createRule(bytes21 _priceFeedId, uint256 _priceTrigger, uint256 _dangerValue, uint8 _triggerType) external payable",
+    "function createRule(bytes21 _priceFeedId, uint256 _priceTrigger, uint8[] memory _triggerTypes, uint256[] memory _dangerValues) external payable",
     "function executeProtection(uint256 _ruleId, tuple(bytes32[] merkleProof, tuple(bytes32 attestationType, bytes32 sourceId, uint64 votingRound, uint64 lowestUsedTimestamp, tuple(string url, string postprocessJq, string abi_signature) requestBody, tuple(bytes abi_encoded_data) responseBody) data) _proof) external",
     "function checkPrice(uint256 _ruleId) external view returns (uint256 currentPrice, int8 decimals, bool triggered)",
     "function withdraw(uint256 _ruleId) external",
     "function ruleCount() external view returns (uint256)",
-    "function rules(uint256) external view returns (address owner, uint256 depositAmount, bytes21 priceFeedId, uint256 priceTrigger, uint256 dangerValue, uint8 triggerType, bool isActive)",
+    "function rules(uint256) external view returns (address owner, uint256 depositAmount, bytes21 priceFeedId, uint256 priceTrigger, bool isActive)",
     "function getUserRules(address _user) external view returns (uint256[])",
     "function getFeedPrice(bytes21 _feedId) external view returns (uint256 value, int8 decimals, uint64 timestamp)",
     "function FLR_USD_FEED_ID() external view returns (bytes21)",
