@@ -11,16 +11,17 @@ contract FlareGuardVault {
     /// @notice Trigger type determines how the FDC event value is compared to dangerValue
     enum TriggerType {
         EXCHANGE_STATUS,    // Trigger when apiValue == dangerValue (e.g., maintenance mode = 1)
-        FEAR_GREED_INDEX    // Trigger when apiValue < dangerValue (e.g., index below 25 = extreme fear)
+        FEAR_GREED_INDEX,   // Trigger when apiValue < dangerValue (e.g., index below 25 = extreme fear)
+        BTC_DOMINANCE       // Trigger when apiValue > dangerValue (e.g., BTC.D above 60% = altcoin risk)
     }
 
     struct ProtectionRule {
         address owner;
         uint256 depositAmount;
-        bytes21 priceFeedId;        // FTSO feed ID (e.g. FLR/USD, XRP/USD)
-        uint256 priceTrigger;       // Price threshold — protect if price drops below this
-        uint256 dangerValue;        // FDC event value that triggers protection
-        TriggerType triggerType;    // How to compare FDC value to dangerValue
+        bytes21 priceFeedId;            // FTSO feed ID (e.g. FLR/USD)
+        uint256 priceTrigger;           // Price threshold — protect if price drops below this
+        TriggerType[] triggerTypes;     // Array of FDC trigger types
+        uint256[] dangerValues;         // Matching thresholds for each trigger type
         bool isActive;
     }
 
@@ -38,29 +39,35 @@ contract FlareGuardVault {
 
     receive() external payable {}
 
-    /// @notice Create a protection rule and deposit native tokens into the vault
+    /// @notice Create a protection rule with multiple trigger types
     /// @param _priceFeedId FTSO feed ID to monitor
     /// @param _priceTrigger Price threshold — if feed value drops below this, trigger protection
-    /// @param _dangerValue FDC event value that indicates danger
-    /// @param _triggerType How to compare FDC value (EXCHANGE_STATUS=equals, FEAR_GREED_INDEX=below)
+    /// @param _triggerTypes Array of FDC trigger types to monitor
+    /// @param _dangerValues Array of threshold values (must match triggerTypes length)
     function createRule(
         bytes21 _priceFeedId,
         uint256 _priceTrigger,
-        uint256 _dangerValue,
-        TriggerType _triggerType
+        TriggerType[] memory _triggerTypes,
+        uint256[] memory _dangerValues
     ) external payable {
         require(msg.value > 0, "Must deposit tokens");
+        require(_triggerTypes.length == _dangerValues.length, "Arrays must match");
 
         uint256 ruleId = rules.length;
-        rules.push(ProtectionRule({
-            owner: msg.sender,
-            depositAmount: msg.value,
-            priceFeedId: _priceFeedId,
-            priceTrigger: _priceTrigger,
-            dangerValue: _dangerValue,
-            triggerType: _triggerType,
-            isActive: true
-        }));
+        
+        // Create rule with arrays
+        ProtectionRule storage newRule = rules.push();
+        newRule.owner = msg.sender;
+        newRule.depositAmount = msg.value;
+        newRule.priceFeedId = _priceFeedId;
+        newRule.priceTrigger = _priceTrigger;
+        newRule.isActive = true;
+        
+        // Copy arrays
+        for (uint256 i = 0; i < _triggerTypes.length; i++) {
+            newRule.triggerTypes.push(_triggerTypes[i]);
+            newRule.dangerValues.push(_dangerValues[i]);
+        }
 
         emit RuleCreated(ruleId, msg.sender, msg.value, _priceTrigger);
     }
@@ -90,13 +97,30 @@ contract FlareGuardVault {
             // Decode the verified response data
             uint256 apiValue = abi.decode(_proof.data.responseBody.abi_encoded_data, (uint256));
             
-            // Apply trigger logic based on type
-            if (rule.triggerType == TriggerType.EXCHANGE_STATUS) {
-                // Trigger when value equals danger value (e.g., maintenance mode = 1)
-                eventTriggered = (apiValue == rule.dangerValue);
-            } else if (rule.triggerType == TriggerType.FEAR_GREED_INDEX) {
-                // Trigger when value is below danger value (e.g., index < 25 = extreme fear)
-                eventTriggered = (apiValue < rule.dangerValue);
+            // Check ALL trigger types — if ANY matches, trigger protection
+            for (uint256 i = 0; i < rule.triggerTypes.length; i++) {
+                TriggerType triggerType = rule.triggerTypes[i];
+                uint256 dangerValue = rule.dangerValues[i];
+                
+                if (triggerType == TriggerType.EXCHANGE_STATUS) {
+                    // Trigger when value equals danger value (e.g., maintenance mode = 1)
+                    if (apiValue == dangerValue) {
+                        eventTriggered = true;
+                        break;
+                    }
+                } else if (triggerType == TriggerType.FEAR_GREED_INDEX) {
+                    // Trigger when value is below danger value (e.g., index < 25 = extreme fear)
+                    if (apiValue < dangerValue) {
+                        eventTriggered = true;
+                        break;
+                    }
+                } else if (triggerType == TriggerType.BTC_DOMINANCE) {
+                    // Trigger when value is above danger value (e.g., BTC.D > 60%)
+                    if (apiValue > dangerValue) {
+                        eventTriggered = true;
+                        break;
+                    }
+                }
             }
         }
 
