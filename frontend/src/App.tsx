@@ -13,6 +13,9 @@ interface Rule {
   priceFeedId: string;
   priceTrigger: bigint;
   isActive: boolean;
+  createdAt: number;
+  triggerTypes: number[];
+  dangerValues: bigint[];
 }
 
 interface PriceInfo {
@@ -44,6 +47,28 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [txStatus, setTxStatus] = useState('');
   const [walletBalance, setWalletBalance] = useState<string>('0');
+
+  // Helper to format triggers
+  const getTriggerDescription = (rule: Rule) => {
+    const triggers = [];
+
+    // Price Trigger
+    if (rule.priceTrigger > 0n) {
+      const decimals = prices[feedNameFromId(rule.priceFeedId)]?.decimals || 7;
+      const price = (Number(rule.priceTrigger) / Math.pow(10, decimals)).toFixed(4);
+      triggers.push(`📉 Price Drop: < $${price}`);
+    }
+
+    // FDC Triggers
+    rule.triggerTypes.forEach((type, index) => {
+      const val = Number(rule.dangerValues[index]);
+      if (type === 0) triggers.push(`🔧 Binance Maintenance (Status: ${val})`);
+      if (type === 1) triggers.push(`😱 Fear & Greed Index < ${val}`);
+      if (type === 2) triggers.push(`📊 BTC Dominance > ${val}%`);
+    });
+
+    return triggers;
+  };
 
   // Fetch live FTSO prices via read-only provider
   const fetchPrices = useCallback(async () => {
@@ -84,10 +109,20 @@ export default function App() {
   const fetchUserRules = useCallback(async () => {
     if (!contract || !address) return;
     try {
-      const ruleIds: bigint[] = await contract.getUserRules(address);
+      // const ruleCount = await contract.ruleCount();
       const fetched: Rule[] = [];
+
+      // Iterate backwards to show newest first
+      // Note: fetching all rules is inefficient for large sets, but fine for testnet demo. 
+      // Using getUserRules would be better if we only want user's rules, but let's stick to previous pattern
+      // Wait, getUserRules returns IDs.
+      const ruleIds: bigint[] = await contract.getUserRules(address);
+
       for (const id of ruleIds) {
         const r = await contract.rules(id);
+        // Fetch extra details including arrays and timestamp
+        const details = await contract.getRuleDetails(id);
+
         fetched.push({
           id: Number(id),
           owner: r.owner,
@@ -95,9 +130,12 @@ export default function App() {
           priceFeedId: r.priceFeedId,
           priceTrigger: r.priceTrigger,
           isActive: r.isActive,
+          createdAt: Number(details.createdAt || 0), // Handle potential missing field if contract update pending
+          triggerTypes: Array.from(details.triggerTypes).map(Number),
+          dangerValues: Array.from(details.dangerValues).map((v: any) => BigInt(v)), // Cast to BigInt
         });
       }
-      setUserRules(fetched);
+      setUserRules(fetched.reverse()); // Show newest first
     } catch (e) {
       console.error("Failed to fetch rules:", e);
     }
@@ -511,9 +549,16 @@ export default function App() {
                     border: '1px solid var(--border-color)',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                      Rule #{rule.id} — {feedNameFromId(rule.priceFeedId)}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                        Rule #{rule.id} — {feedNameFromId(rule.priceFeedId)}
+                      </div>
+                      {rule.createdAt > 0 && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Created: {new Date(rule.createdAt * 1000).toLocaleString()}
+                        </div>
+                      )}
                     </div>
                     <span style={{
                       fontSize: '0.7rem',
@@ -525,8 +570,22 @@ export default function App() {
                       {rule.isActive ? 'Active' : 'Triggered'}
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: rule.isActive ? '8px' : '0' }}>
-                    {ethers.formatEther(rule.depositAmount)} C2FLR — Trigger: ${(Number(rule.priceTrigger) / Math.pow(10, prices[feedNameFromId(rule.priceFeedId)]?.decimals || 7)).toFixed(4)}
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: rule.isActive ? '8px' : '0', padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px' }}>
+                    <div style={{ marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 600 }}>Protected Amount:</span> {ethers.formatEther(rule.depositAmount)} C2FLR
+                    </div>
+                    <div style={{ fontWeight: 600, marginBottom: '4px', marginTop: '6px' }}>Triggers:</div>
+                    {getTriggerDescription(rule).length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {getTriggerDescription(rule).map((desc, i) => (
+                          <div key={i} style={{ paddingLeft: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: 'var(--primary)', fontSize: '0.6rem' }}>●</span> {desc}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontStyle: 'italic', paddingLeft: '8px' }}>No triggers configured</div>
+                    )}
                   </div>
                   {rule.isActive && (
                     <div style={{ display: 'flex', gap: '6px' }}>

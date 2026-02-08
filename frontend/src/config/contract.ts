@@ -1,7 +1,7 @@
 // FlareGuardVault contract configuration
 // Update VAULT_ADDRESS after deploying to Coston2
 
-export const VAULT_ADDRESS = "0x31A22e4abbdBa1b6067567E90Bf27391931b60F4"; // Deployed to Coston2
+export const VAULT_ADDRESS = "0xBB552b05e84B300D412F38Ff6A44097D93ed4CD5"; // Deployed to Coston2 (Updated)
 
 export const COSTON2_CHAIN_ID = 114;
 export const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
@@ -55,7 +55,8 @@ export const VAULT_ABI = [
     "function checkPrice(uint256 _ruleId) external view returns (uint256 currentPrice, int8 decimals, bool triggered)",
     "function withdraw(uint256 _ruleId) external",
     "function ruleCount() external view returns (uint256)",
-    "function rules(uint256) external view returns (address owner, uint256 depositAmount, bytes21 priceFeedId, uint256 priceTrigger, bool isActive)",
+    "function rules(uint256) external view returns (address owner, uint256 depositAmount, bytes21 priceFeedId, uint256 priceTrigger, bool isActive, uint256 createdAt)",
+    "function getRuleDetails(uint256 _ruleId) external view returns (uint8[] memory triggerTypes, uint256[] memory dangerValues, uint256 createdAt)",
     "function getUserRules(address _user) external view returns (uint256[])",
     "function getFeedPrice(bytes21 _feedId) external view returns (uint256 value, int8 decimals, uint64 timestamp)",
     "function FLR_USD_FEED_ID() external view returns (bytes21)",
