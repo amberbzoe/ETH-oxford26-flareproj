@@ -492,7 +492,7 @@ export default function App() {
               <h2 style={{ fontSize: '1.2rem' }}>Active Protections</h2>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', height: '400px', paddingRight: '4px' }}>
               {!address ? (
                 <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   Connect your wallet to view and manage your protection rules.
