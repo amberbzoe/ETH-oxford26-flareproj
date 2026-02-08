@@ -272,13 +272,6 @@ export default function App() {
           </div>
         )}
 
-        {!address && (
-          <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', marginBottom: '24px' }}>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>Connect your wallet to get started</p>
-            <button className="btn-primary" onClick={connect}>Connect Wallet</button>
-          </div>
-        )}
-
         {address && !isCoston2 && (
           <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', marginBottom: '24px', color: 'var(--primary)' }}>
             Please switch to Coston2 testnet (Chain ID 114)
