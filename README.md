@@ -10,7 +10,7 @@ FlareGuard is an automated DeFi position protection vault that combines on-chain
 
 - **Network:** Coston2 Testnet (Chain ID 114)
 - **Flare Integrations:** FTSO v2 (price feeds), FDC JsonApi (off-chain event attestation)
-- **Demo Link:** *[Coming soon]*
+- **Demo Link:** https://starlit-cannoli-4362df.netlify.app/
 
 ---
 
